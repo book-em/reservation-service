@@ -1,0 +1,77 @@
+name: Test on develop
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+    paths:
+      - 'src/**'
+      - 'compose.yml'
+      - '*.sh'
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.24
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Write public key from secret
+        run: printf "%s" "${{ secrets.PUBLIC_KEY }}" > keys/public_key.pem
+
+      - name: Run test script
+        run: |
+          chmod +x ./run-tests.sh
+          make test_unit
+
+      - name: Upload test results as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            src/test-out/
+
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.24
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Write public key from secret
+        run: printf "%s" "${{ secrets.PUBLIC_KEY }}" > keys/public_key.pem
+
+      - name: Run tests
+        run: | 
+          chmod +x ./run-integration.sh
+          make test_integration MODE=ci
