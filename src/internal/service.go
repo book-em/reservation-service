@@ -7,9 +7,9 @@ import (
 
 type Service interface {
 	CreateRequest(callerID uint, dto CreateReservationRequestDTO) (*ReservationRequest, error)
-	//FindPendingRequestsByGuest(callerID uint) ([]ReservationRequest, error)
-	//FindPendingRequestsByRoom(callerID uint, roomID uint) ([]ReservationRequest, error)
-	//DeleteRequest(callerID uint, requestID uint) error
+	FindPendingRequestsByGuest(callerID uint) ([]ReservationRequest, error)
+	FindPendingRequestsByRoom(callerID uint, roomID uint) ([]ReservationRequest, error)
+	DeleteRequest(callerID uint, requestID uint) error
 }
 
 type service struct {

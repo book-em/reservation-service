@@ -31,7 +31,7 @@ type ReservationDTO struct {
 	Cost       uint      `json:"cost"`
 }
 
-func ToReservationRequestDTO(r ReservationRequest) ReservationRequestDTO {
+func NewReservationRequestDTO(r ReservationRequest) ReservationRequestDTO {
 	return ReservationRequestDTO{
 		ID:         r.ID,
 		RoomID:     r.RoomID,
@@ -43,7 +43,7 @@ func ToReservationRequestDTO(r ReservationRequest) ReservationRequestDTO {
 	}
 }
 
-func ToReservationDTO(r Reservation) ReservationDTO {
+func NewReservationDTO(r Reservation) ReservationDTO {
 	return ReservationDTO{
 		ID:         r.ID,
 		RoomID:     r.RoomID,
