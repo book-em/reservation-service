@@ -35,6 +35,7 @@ var (
 	ErrUnauthorized    = &APIError{Code: http.StatusUnauthorized, Message: "Unauthorized"}
 	ErrBadRequest      = &APIError{Code: http.StatusBadRequest, Message: "Bad request"}
 	ErrUnauthenticated = &APIError{Code: http.StatusForbidden, Message: "Unauthenticated"}
+	ErrConflict        = &APIError{Code: http.StatusConflict, Message: "Conflict"}
 )
 
 func MapErrorToHTTP(err error) (int, string) {
