@@ -3,6 +3,7 @@ package internal
 import (
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/client/userclient"
+	"time"
 )
 
 type Service interface {
@@ -10,6 +11,8 @@ type Service interface {
 	FindPendingRequestsByGuest(callerID uint) ([]ReservationRequest, error)
 	FindPendingRequestsByRoom(callerID uint, roomID uint) ([]ReservationRequest, error)
 	DeleteRequest(callerID uint, requestID uint) error
+
+	AreThereNoReservationsOnDays(roomID uint, from, to time.Time) (bool, error)
 }
 
 type service struct {
@@ -94,7 +97,17 @@ func (s *service) CreateRequest(callerID uint, dto CreateReservationRequestDTO) 
 		}
 	}
 
-	// [10] Create request
+	// [10] Check if an existing reservation exists for this time range
+
+	ok, err := s.AreThereNoReservationsOnDays(dto.RoomID, dto.DateFrom, dto.DateTo)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, ErrConflict
+	}
+
+	// [11] Create request
 
 	req := &ReservationRequest{
 		RoomID:             dto.RoomID,
@@ -198,4 +211,17 @@ func (s *service) DeleteRequest(callerID uint, requestID uint) error {
 	// [4] Delete
 
 	return s.repo.DeleteRequest(requestID)
+}
+
+func (s *service) AreThereNoReservationsOnDays(roomID uint, from, to time.Time) (bool, error) {
+	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
+		reservations, err := s.repo.FindReservationsByRoomIDForDay(roomID, d)
+		if err != nil {
+			return false, err
+		}
+		if len(reservations) > 0 {
+			return false, nil
+		}
+	}
+	return true, nil
 }
