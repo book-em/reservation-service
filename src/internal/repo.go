@@ -20,7 +20,7 @@ type Repository interface {
 	CreateReservation(res *Reservation) error
 	CancelReservation(id uint) error
 	FindCancelledReservationsByGuestID(guestID uint) ([]Reservation, error)
-	FindReservationsByRoomIDInRange(roomID uint, from, to time.Time) ([]Reservation, error)
+	FindReservationsByRoomIDForDay(roomID uint, day time.Time) ([]Reservation, error)
 	FindReservationsByGuestID(guestID uint) ([]Reservation, error)
 	CountGuestCancellations(guestID uint) (int64, error)
 }
@@ -71,9 +71,9 @@ func (r *repository) FindCancelledReservationsByGuestID(guestID uint) ([]Reserva
 	return reservations, err
 }
 
-func (r *repository) FindReservationsByRoomIDInRange(roomID uint, from, to time.Time) ([]Reservation, error) {
+func (r *repository) FindReservationsByRoomIDForDay(roomID uint, day time.Time) ([]Reservation, error) {
 	var reservations []Reservation
-	err := r.db.Where("room_id = ? AND date_to >= ? AND date_from <= ?", roomID, from, to).Find(&reservations).Error
+	err := r.db.Where("room_id = ? AND date_to >= ? AND date_from <= ?", roomID, day, day).Find(&reservations).Error
 	return reservations, err
 }
 
