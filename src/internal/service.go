@@ -15,10 +15,26 @@ type AuthContext struct {
 
 type Service interface {
 	CreateRequest(authctx AuthContext, dto CreateReservationRequestDTO) (*ReservationRequest, error)
+
+	// FindPendingRequestsByGuest answers the question:
+	//
+	// "which reservation requests have I created, that are not accepted or rejected?"
 	FindPendingRequestsByGuest(callerID uint) ([]ReservationRequest, error)
+
+	// FindPendingRequestsByRoom answers the question:
+	//
+	// "which reservation requests are there for this room, that are not accepted or rejected?"
 	FindPendingRequestsByRoom(callerID uint, roomID uint) ([]ReservationRequest, error)
+
+	// DeleteRequest removes a reservation request by the guest. This happens
+	// when the guest changes his mind before the request has been processed
+	// (accepted/rejected).
 	DeleteRequest(callerID uint, requestID uint) error
 
+	// AreThereNoReservationsOnDays checks if a room has no reservations in the
+	// specified date range.
+	//
+	// Note that this is referring to RESERVATIONS and not RESERVATION REQUESTS.
 	AreThereNoReservationsOnDays(roomID uint, from, to time.Time) (bool, error)
 }
 
@@ -218,17 +234,25 @@ func (s *service) DeleteRequest(callerID uint, requestID uint) error {
 		return err
 	}
 	found := false
+	var request *ReservationRequest
 	for _, req := range requests {
 		if req.ID == requestID {
 			found = true
+			request = &req
 			break
 		}
 	}
 	if !found {
-		return ErrUnauthorized
+		return ErrNotFound("reservation request", requestID)
 	}
 
-	// [4] Delete
+	// [4] Request must be pending
+
+	if request.Status != Pending {
+		return ErrBadRequestCustom("cannot cancel a handled request")
+	}
+
+	// [5] Delete
 
 	return s.repo.DeleteRequest(requestID)
 }
