@@ -1,6 +1,7 @@
 package roomclient
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ type RoomClient interface {
 
 	FindCurrentAvailabilityListOfRoom(roomId uint) (*RoomAvailabilityListDTO, error)
 	FindCurrentPricelistOfRoom(roomId uint) (*RoomPriceListDTO, error)
+	QueryForReservation(jwt string, dto RoomReservationQueryDTO) (*RoomReservationQueryResponseDTO, error)
 }
 
 type roomClient struct {
@@ -107,6 +109,47 @@ func (c *roomClient) FindCurrentPricelistOfRoom(roomId uint) (*RoomPriceListDTO,
 	}
 
 	var obj RoomPriceListDTO
+	if err := json.Unmarshal(bodyBytes, &obj); err != nil {
+		log.Printf("JSON Unmarshall error: %v", err)
+		return nil, err
+	}
+
+	return &obj, nil
+}
+
+func (c *roomClient) QueryForReservation(jwt string, dto RoomReservationQueryDTO) (*RoomReservationQueryResponseDTO, error) {
+	log.Printf("Query room %d for potential reservation", dto.RoomID)
+
+	jsonBytes, err := json.Marshal(dto)
+	if err != nil {
+		log.Printf("JSON marshall error %v", err)
+		return nil, err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/reservation/query", c.baseURL), bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", "Bearer "+jwt)
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		log.Printf("Error %v", err)
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Could not query room %d for potential reservation", dto.RoomID)
+		return nil, fmt.Errorf("failed querying room %d", dto.RoomID)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("Parsing response error: %v", err)
+		return nil, err
+	}
+
+	var obj RoomReservationQueryResponseDTO
 	if err := json.Unmarshal(bodyBytes, &obj); err != nil {
 		log.Printf("JSON Unmarshall error: %v", err)
 		return nil, err
