@@ -3,11 +3,18 @@ package internal
 import (
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/client/userclient"
+	"log"
 	"time"
 )
 
+// AuthContext is used in cases where callerID is not enoug
+type AuthContext struct {
+	CallerID uint
+	JWT      string
+}
+
 type Service interface {
-	CreateRequest(callerID uint, dto CreateReservationRequestDTO) (*ReservationRequest, error)
+	CreateRequest(authctx AuthContext, dto CreateReservationRequestDTO) (*ReservationRequest, error)
 	FindPendingRequestsByGuest(callerID uint) ([]ReservationRequest, error)
 	FindPendingRequestsByRoom(callerID uint, roomID uint) ([]ReservationRequest, error)
 	DeleteRequest(callerID uint, requestID uint) error
@@ -28,7 +35,10 @@ func NewService(
 	return &service{roomRepo, userClient, roomClient}
 }
 
-func (s *service) CreateRequest(callerID uint, dto CreateReservationRequestDTO) (*ReservationRequest, error) {
+func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationRequestDTO) (*ReservationRequest, error) {
+	callerID := authctx.CallerID
+	jwt := authctx.JWT
+
 	// [1] Find user
 
 	user, err := s.userClient.FindById(callerID)
@@ -53,27 +63,37 @@ func (s *service) CreateRequest(callerID uint, dto CreateReservationRequestDTO) 
 
 	availList, err := s.roomClient.FindCurrentAvailabilityListOfRoom(room.ID)
 	if err != nil {
-		return nil, ErrNotFound("room", dto.RoomID)
+		return nil, ErrNotFound("room availability list", dto.RoomID)
 	}
 
-	// [5] Validate availability
-
-	// TODO: This should be an API method in the room service.
-	// For now, I'll hardcode it (allow).
-
-	// [6] Find room price list
+	// [5] Find room price list
 
 	pricelist, err := s.roomClient.FindCurrentPricelistOfRoom(room.ID)
 	if err != nil {
-		return nil, ErrNotFound("room", dto.RoomID)
+		return nil, ErrNotFound("room price list", dto.RoomID)
+	}
+
+	// [6] Query room for reservation data.
+
+	queryDTO := roomclient.RoomReservationQueryDTO{
+		RoomID:     room.ID,
+		DateFrom:   dto.DateFrom,
+		DateTo:     dto.DateTo,
+		GuestCount: dto.GuestCount,
+	}
+	queryResponse, err := s.roomClient.QueryForReservation(jwt, queryDTO)
+	if err != nil {
+		return nil, ErrBadRequest
+	}
+
+	if !queryResponse.Available {
+		log.Print("Room is not available at this time range")
+		return nil, ErrBadRequest
 	}
 
 	// [7] Calculate price
 
-	// TODO: This should be an API method in the room service.
-	// For now, I'll hardcode it.
-
-	cost := uint(1000)
+	cost := queryResponse.TotalCost
 
 	// [8] Validate fields
 

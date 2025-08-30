@@ -90,3 +90,17 @@ type CreateRoomPriceItemDTO struct {
 	DateTo     time.Time `json:"dateTo"`
 	Price      uint      `json:"price"`
 }
+
+// ---------------------------------------------------------------
+
+type RoomReservationQueryDTO struct {
+	RoomID     uint      `json:"roomId"`
+	DateFrom   time.Time `json:"dateFrom"`
+	DateTo     time.Time `json:"dateTo"`
+	GuestCount uint      `json:"guestCount"`
+}
+
+type RoomReservationQueryResponseDTO struct {
+	Available bool `json:"available"`
+	TotalCost uint `json:"totalCost"`
+}
