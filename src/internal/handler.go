@@ -26,6 +26,12 @@ type Handler struct{ service Service }
 func NewHandler(s Service) Handler { return Handler{s} }
 
 func (h *Handler) createReservationRequest(ctx *gin.Context) {
+	jwtString, err := util.GetJwtString(ctx)
+	if err != nil {
+		AbortError(ctx, ErrUnauthenticated)
+		return
+	}
+
 	jwt, err := util.GetJwt(ctx)
 	if err != nil {
 		AbortError(ctx, ErrUnauthenticated)
@@ -43,7 +49,7 @@ func (h *Handler) createReservationRequest(ctx *gin.Context) {
 		return
 	}
 
-	reservation, err := h.service.CreateRequest(jwt.ID, dto)
+	reservation, err := h.service.CreateRequest(AuthContext{CallerID: jwt.ID, JWT: jwtString}, dto)
 	if err != nil {
 		AbortError(ctx, err)
 		return
