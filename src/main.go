@@ -27,6 +27,7 @@ var (
 
 func syncDatabase() {
 	dB.AutoMigrate(&internal.Reservation{})
+	dB.AutoMigrate(&internal.ReservationRequest{})
 }
 
 func connectToDb() {
