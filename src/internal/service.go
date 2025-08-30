@@ -55,41 +55,41 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 	callerID := authctx.CallerID
 	jwt := authctx.JWT
 
-	// [1] Find user
+	log.Print("[1] Find user")
 
 	user, err := s.userClient.FindById(callerID)
 	if err != nil {
 		return nil, ErrUnauthenticated
 	}
 
-	// [2] User must be a Guest
+	log.Print("[2] User must be a Guest")
 
 	if user.Role != string(userclient.Guest) {
 		return nil, ErrUnauthorized
 	}
 
-	// [3] Find room
+	log.Print("[3] Find room")
 
 	room, err := s.roomClient.FindById(dto.RoomID)
 	if err != nil {
 		return nil, ErrNotFound("room", dto.RoomID)
 	}
 
-	// [4] Find room availability list
+	log.Print("[4] Find room availability list")
 
 	availList, err := s.roomClient.FindCurrentAvailabilityListOfRoom(room.ID)
 	if err != nil {
 		return nil, ErrNotFound("room availability list", dto.RoomID)
 	}
 
-	// [5] Find room price list
+	log.Print("[5] Find room price list")
 
 	pricelist, err := s.roomClient.FindCurrentPricelistOfRoom(room.ID)
 	if err != nil {
 		return nil, ErrNotFound("room price list", dto.RoomID)
 	}
 
-	// [6] Query room for reservation data.
+	log.Print("[6] Query room for reservation data")
 
 	queryDTO := roomclient.RoomReservationQueryDTO{
 		RoomID:     room.ID,
@@ -107,11 +107,11 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		return nil, ErrBadRequest
 	}
 
-	// [7] Calculate price
+	log.Print("[7] Calculate price")
 
 	cost := queryResponse.TotalCost
 
-	// [8] Validate fields
+	log.Print("[8] Validate fields")
 
 	if dto.GuestCount < 1 {
 		return nil, ErrBadRequestCustom("guest count must be at least 1")
@@ -121,7 +121,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		return nil, ErrBadRequestCustom("dates are reversed")
 	}
 
-	// [9] Allow only 1 request per guest per room
+	log.Print("[9] Allow only 1 request per guest per room")
 
 	existing, err := s.repo.FindPendingRequestsByGuestID(callerID)
 	if err != nil {
@@ -133,7 +133,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		}
 	}
 
-	// [10] Check if an existing reservation exists for this time range
+	log.Print("[10] Check if an existing reservation exists for this time range")
 
 	ok, err := s.AreThereNoReservationsOnDays(dto.RoomID, dto.DateFrom, dto.DateTo)
 	if err != nil {
@@ -143,7 +143,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		return nil, ErrConflict
 	}
 
-	// [11] Create request
+	log.Print("[11] Create request")
 
 	req := &ReservationRequest{
 		RoomID:             dto.RoomID,
