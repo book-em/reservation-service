@@ -90,7 +90,7 @@ func (c *roomClient) FindCurrentAvailabilityListOfRoom(roomId uint) (*RoomAvaila
 func (c *roomClient) FindCurrentPricelistOfRoom(roomId uint) (*RoomPriceListDTO, error) {
 	log.Printf("Find current price list of room %d", roomId)
 
-	resp, err := http.Get(fmt.Sprintf("%s/available/room/%d", c.baseURL, roomId))
+	resp, err := http.Get(fmt.Sprintf("%s/price/room/%d", c.baseURL, roomId))
 
 	if err != nil {
 		log.Printf("Error %v", err)
