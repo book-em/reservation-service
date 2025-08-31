@@ -40,6 +40,7 @@ func NewReservationRequestDTO(r ReservationRequest) ReservationRequestDTO {
 		GuestCount: r.GuestCount,
 		GuestID:    r.GuestID,
 		Status:     string(r.Status),
+		Cost:       r.Cost,
 	}
 }
 
@@ -52,5 +53,6 @@ func NewReservationDTO(r Reservation) ReservationDTO {
 		GuestCount: r.GuestCount,
 		GuestID:    r.GuestID,
 		Cancelled:  r.Cancelled,
+		Cost:       r.Cost,
 	}
 }
