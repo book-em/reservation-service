@@ -55,41 +55,41 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 	callerID := authctx.CallerID
 	jwt := authctx.JWT
 
-	log.Print("[1] Find user")
+	log.Print("CreateRequest [1] Find user")
 
 	user, err := s.userClient.FindById(callerID)
 	if err != nil {
 		return nil, ErrUnauthenticated
 	}
 
-	log.Print("[2] User must be a Guest")
+	log.Print("CreateRequest [2] User must be a Guest")
 
 	if user.Role != string(userclient.Guest) {
 		return nil, ErrUnauthorized
 	}
 
-	log.Print("[3] Find room")
+	log.Print("CreateRequest [3] Find room")
 
 	room, err := s.roomClient.FindById(dto.RoomID)
 	if err != nil {
 		return nil, ErrNotFound("room", dto.RoomID)
 	}
 
-	log.Print("[4] Find room availability list")
+	log.Print("CreateRequest [4] Find room availability list")
 
 	availList, err := s.roomClient.FindCurrentAvailabilityListOfRoom(room.ID)
 	if err != nil {
 		return nil, ErrNotFound("room availability list", dto.RoomID)
 	}
 
-	log.Print("[5] Find room price list")
+	log.Print("CreateRequest [5] Find room price list")
 
 	pricelist, err := s.roomClient.FindCurrentPricelistOfRoom(room.ID)
 	if err != nil {
 		return nil, ErrNotFound("room price list", dto.RoomID)
 	}
 
-	log.Print("[6] Query room for reservation data")
+	log.Print("CreateRequest [6] Query room for reservation data")
 
 	queryDTO := roomclient.RoomReservationQueryDTO{
 		RoomID:     room.ID,
@@ -107,11 +107,11 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		return nil, ErrBadRequest
 	}
 
-	log.Print("[7] Calculate price")
+	log.Print("CreateRequest [7] Calculate price")
 
 	cost := queryResponse.TotalCost
 
-	log.Print("[8] Validate fields")
+	log.Print("CreateRequest [8] Validate fields")
 
 	if dto.GuestCount < 1 {
 		return nil, ErrBadRequestCustom("guest count must be at least 1")
@@ -121,7 +121,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		return nil, ErrBadRequestCustom("dates are reversed")
 	}
 
-	log.Print("[9] Allow only 1 request per guest per room")
+	log.Print("CreateRequest [9] Allow only 1 request per guest per room")
 
 	existing, err := s.repo.FindPendingRequestsByGuestID(callerID)
 	if err != nil {
@@ -133,7 +133,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		}
 	}
 
-	log.Print("[10] Check if an existing reservation exists for this time range")
+	log.Print("CreateRequest [10] Check if an existing reservation exists for this time range")
 
 	ok, err := s.AreThereNoReservationsOnDays(dto.RoomID, dto.DateFrom, dto.DateTo)
 	if err != nil {
@@ -143,7 +143,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		return nil, ErrConflict
 	}
 
-	log.Print("[11] Create request")
+	log.Print("CreateRequest [11] Create request")
 
 	req := &ReservationRequest{
 		RoomID:             dto.RoomID,
@@ -163,71 +163,71 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 }
 
 func (s *service) FindPendingRequestsByGuest(callerID uint) ([]ReservationRequest, error) {
-	// [1] Find user
+	log.Print("FindPendingRequestsByGuest [1] Find user")
 
 	user, err := s.userClient.FindById(callerID)
 	if err != nil {
 		return nil, ErrNotFound("user", callerID)
 	}
 
-	// [2] User must be guest
+	log.Print("FindPendingRequestsByGuest [2] User must be guest")
 
 	if user.Role != string(userclient.Guest) {
 		return nil, ErrUnauthorized
 	}
 
-	// [3] Return
+	log.Print("FindPendingRequestsByGuest [3] Return")
 
 	return s.repo.FindPendingRequestsByGuestID(callerID)
 }
 
 func (s *service) FindPendingRequestsByRoom(callerID uint, roomID uint) ([]ReservationRequest, error) {
-	// [1] Find user
+	log.Print("FindPendingRequestsByRoom [1] User must be guest")
 
 	user, err := s.userClient.FindById(callerID)
 	if err != nil {
 		return nil, ErrNotFound("user", callerID)
 	}
 
-	// [2] User must be host
+	log.Print("FindPendingRequestsByRoom [2] User must be host")
 
 	if user.Role != string(userclient.Host) {
 		return nil, ErrUnauthorized
 	}
 
-	// [3] Find room
+	log.Print("FindPendingRequestsByRoom [3] Find room")
 
 	room, err := s.roomClient.FindById(roomID)
 	if err != nil {
 		return nil, ErrNotFound("room", roomID)
 	}
 
-	// [4] Host must be the owner of this room
+	log.Print("FindPendingRequestsByRoom [4] Host must be the owner of this room")
 
 	if room.HostID != callerID {
 		return nil, ErrUnauthorized
 	}
 
-	// [5] Return
+	log.Print("FindPendingRequestsByRoom [5] Return")
 
 	return s.repo.FindPendingRequestsByRoomID(roomID)
 }
 
 func (s *service) DeleteRequest(callerID uint, requestID uint) error {
-	// [1] Find user
+	log.Print("DeleteRequest [1] Find user")
 
 	user, err := s.userClient.FindById(callerID)
 	if err != nil {
 		return ErrNotFound("user", callerID)
 	}
 
-	// [2] User must be guest
+	log.Print("DeleteRequest [2] User must be guest")
 
 	if user.Role != string(userclient.Guest) {
 		return ErrUnauthorized
 	}
 
-	// [3] Find request
+	log.Print("DeleteRequest [3] Find request")
 
 	requests, err := s.repo.FindPendingRequestsByGuestID(callerID)
 	if err != nil {
@@ -246,26 +246,34 @@ func (s *service) DeleteRequest(callerID uint, requestID uint) error {
 		return ErrNotFound("reservation request", requestID)
 	}
 
-	// [4] Request must be pending
+	log.Print("DeleteRequest [4] Request must be pending")
 
 	if request.Status != Pending {
 		return ErrBadRequestCustom("cannot cancel a handled request")
 	}
 
-	// [5] Delete
+	log.Print("DeleteRequest [5] Delete")
 
 	return s.repo.DeleteRequest(requestID)
 }
 
 func (s *service) AreThereNoReservationsOnDays(roomID uint, from, to time.Time) (bool, error) {
+	log.Printf("AreThereNoReservationsOnDays [1] Checking if room %d has a reservation from %s to %s", roomID, from.String(), to.String())
+
 	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
+		log.Printf("AreThereNoReservationsOnDays [1.x] Checking if room %d has a reservation on day %s", roomID, d.String())
 		reservations, err := s.repo.FindReservationsByRoomIDForDay(roomID, d)
 		if err != nil {
+			log.Printf("AreThereNoReservationsOnDays [1.x] Error %s", err.Error())
 			return false, err
 		}
 		if len(reservations) > 0 {
+			log.Printf("AreThereNoReservationsOnDays [1.x] Reservation found on day %s", d.String())
 			return false, nil
 		}
 	}
+
+	log.Printf("AreThereNoReservationsOnDays [2] OK, no reservations found for room %d", roomID)
+
 	return true, nil
 }
