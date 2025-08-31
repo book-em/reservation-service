@@ -24,6 +24,10 @@ const URL_reservation = "http://reservation-service:8080/api/"
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
+type AvailabilityResponse struct {
+	Available bool `json:"available"`
+}
+
 func GenName(length int) string {
 	b := make([]rune, length)
 	for i := range b {
@@ -382,4 +386,23 @@ func QueryRoomAvailability(jwt string, dto roomclient.RoomReservationQueryDTO) (
 	}
 
 	return result, nil
+}
+
+func CheckReservationAvailability(roomID uint, from, to string) (*http.Response, error) {
+	url := fmt.Sprintf("/room/%d/availability?from=%s&to=%s", roomID, from, to)
+	return http.Get(url)
+}
+
+func ResponseToReservationAvailability(resp *http.Response) AvailabilityResponse {
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read response body: %v", err))
+	}
+
+	var obj AvailabilityResponse
+	if err := json.Unmarshal(bodyBytes, &obj); err != nil {
+		panic(fmt.Sprintf("failed to unmarshal: %v", err))
+	}
+
+	return obj
 }
