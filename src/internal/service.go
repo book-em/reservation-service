@@ -3,6 +3,7 @@ package internal
 import (
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/client/userclient"
+	"bookem-reservation-service/util"
 	"log"
 	"time"
 )
@@ -121,7 +122,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		return nil, ErrBadRequestCustom("dates are reversed")
 	}
 
-	log.Print("CreateRequest [9] Allow only 1 request per guest per room")
+	log.Print("CreateRequest [9] Prevent overlapping requests for the same room and same guest")
 
 	existing, err := s.repo.FindPendingRequestsByGuestID(callerID)
 	if err != nil {
@@ -129,7 +130,9 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 	}
 	for _, req := range existing {
 		if req.RoomID == dto.RoomID {
-			return nil, ErrConflict
+			if util.AreDatesIntersecting(req.DateFrom, req.DateTo, dto.DateFrom, dto.DateTo) {
+				return nil, ErrConflict
+			}
 		}
 	}
 
