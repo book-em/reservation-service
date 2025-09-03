@@ -186,11 +186,19 @@ func Test_CreateRequest_ReversedDates(t *testing.T) {
 	assert.Nil(t, req)
 }
 
-func Test_CreateRequest_ConflictDueToExistingRequestForUser(t *testing.T) {
+func Test_CreateRequest_ConflictDueToExistingRequestForUserInThatDateRange(t *testing.T) {
 	svc, repo, userClient, roomClient := CreateTestRoomService()
 
-	existing := []internal.ReservationRequest{{RoomID: 1}}
+	existing := []internal.ReservationRequest{
+		{
+			RoomID:   1,
+			DateFrom: time.Now().AddDate(0, 0, 4),
+			DateTo:   time.Now().AddDate(0, 0, 8),
+		},
+	}
 	repo.On("FindPendingRequestsByGuestID", uint(1)).Return(existing, nil)
+	repo.On("FindReservationsByRoomIDForDay", mock.Anything, mock.Anything).Return([]internal.Reservation{}, nil)
+	repo.On("CreateRequest", mock.AnythingOfType("*internal.ReservationRequest")).Return(nil)
 
 	userClient.On("FindById", uint(1)).Return(DefaultUser_Guest, nil)
 	roomClient.On("FindById", uint(1)).Return(DefaultRoom, nil)
@@ -199,17 +207,36 @@ func Test_CreateRequest_ConflictDueToExistingRequestForUser(t *testing.T) {
 	roomClient.On("QueryForReservation", mock.Anything, mock.Anything).Return(DefaultReservationQueryResponse, nil)
 
 	auth := internal.AuthContext{CallerID: 1, JWT: "token"}
-	dto := internal.CreateReservationRequestDTO{
-		RoomID:     1,
-		DateFrom:   time.Now().AddDate(0, 0, 1),
-		DateTo:     time.Now().AddDate(0, 0, 2),
-		GuestCount: 2,
+
+	// (1) Not overlapping (1, 2) with (4, 8) => OK
+	{
+		dto := internal.CreateReservationRequestDTO{
+			RoomID:     1,
+			DateFrom:   time.Now().AddDate(0, 0, 1),
+			DateTo:     time.Now().AddDate(0, 0, 2),
+			GuestCount: 2,
+		}
+
+		req, err := svc.CreateRequest(auth, dto)
+
+		assert.NoError(t, err)
+		assert.NotNil(t, req)
 	}
 
-	req, err := svc.CreateRequest(auth, dto)
+	// (2) Overlapping (2, 5) with (4, 8) => Error
+	{
+		dto := internal.CreateReservationRequestDTO{
+			RoomID:     1,
+			DateFrom:   time.Now().AddDate(0, 0, 2),
+			DateTo:     time.Now().AddDate(0, 0, 5),
+			GuestCount: 2,
+		}
 
-	assert.ErrorIs(t, err, internal.ErrConflict)
-	assert.Nil(t, req)
+		req, err := svc.CreateRequest(auth, dto)
+
+		assert.ErrorIs(t, err, internal.ErrConflict)
+		assert.Nil(t, req)
+	}
 }
 
 func Test_CreateRequest_ConflictDueToReservationOverlap(t *testing.T) {
