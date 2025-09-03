@@ -31,11 +31,11 @@ type Service interface {
 	// (accepted/rejected).
 	DeleteRequest(callerID uint, requestID uint) error
 
-	// AreThereNoReservationsOnDays checks if a room has no reservations in the
+	// AreThereReservationsOnDays checks if a room has reservations in the
 	// specified date range.
 	//
 	// Note that this is referring to RESERVATIONS and not RESERVATION REQUESTS.
-	AreThereNoReservationsOnDays(roomID uint, from, to time.Time) (bool, error)
+	AreThereReservationsOnDays(roomID uint, from, to time.Time) (bool, error)
 }
 
 type service struct {
@@ -133,13 +133,13 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		}
 	}
 
-	log.Print("CreateRequest [10] Check if an existing reservation exists for this time range")
+	log.Print("CreateRequest [10] Check if this room has a reservation for this date range")
 
-	ok, err := s.AreThereNoReservationsOnDays(dto.RoomID, dto.DateFrom, dto.DateTo)
+	has, err := s.AreThereReservationsOnDays(dto.RoomID, dto.DateFrom, dto.DateTo)
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
+	if has {
 		return nil, ErrConflict
 	}
 
@@ -257,23 +257,23 @@ func (s *service) DeleteRequest(callerID uint, requestID uint) error {
 	return s.repo.DeleteRequest(requestID)
 }
 
-func (s *service) AreThereNoReservationsOnDays(roomID uint, from, to time.Time) (bool, error) {
-	log.Printf("AreThereNoReservationsOnDays [1] Checking if room %d has a reservation from %s to %s", roomID, from.String(), to.String())
+func (s *service) AreThereReservationsOnDays(roomID uint, from, to time.Time) (bool, error) {
+	log.Printf("AreThereReservationsOnDays [1] Checking if room %d has a reservation from %s to %s", roomID, from.String(), to.String())
 
 	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
-		log.Printf("AreThereNoReservationsOnDays [1.x] Checking if room %d has a reservation on day %s", roomID, d.String())
+		log.Printf("AreThereReservationsOnDays [1.x] Checking if room %d has a reservation on day %s", roomID, d.String())
 		reservations, err := s.repo.FindReservationsByRoomIDForDay(roomID, d)
 		if err != nil {
-			log.Printf("AreThereNoReservationsOnDays [1.x] Error %s", err.Error())
+			log.Printf("AreThereReservationsOnDays [1.x] Error %s", err.Error())
 			return false, err
 		}
 		if len(reservations) > 0 {
-			log.Printf("AreThereNoReservationsOnDays [1.x] Reservation found on day %s", d.String())
-			return false, nil
+			log.Printf("AreThereReservationsOnDays [1.x] Reservation found on day %s", d.String())
+			return true, nil
 		}
 	}
 
-	log.Printf("AreThereNoReservationsOnDays [2] OK, no reservations found for room %d", roomID)
+	log.Printf("AreThereReservationsOnDays [2] OK, no reservations found for room %d", roomID)
 
-	return true, nil
+	return false, nil
 }

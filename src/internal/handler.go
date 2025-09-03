@@ -176,11 +176,11 @@ func (h *Handler) checkAvailability(ctx *gin.Context) {
 		return
 	}
 
-	available, err := h.service.AreThereNoReservationsOnDays(uint(roomID), from, to)
+	available, err := h.service.AreThereReservationsOnDays(uint(roomID), from, to)
 	if err != nil {
 		AbortError(ctx, err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"available": available})
+	ctx.JSON(http.StatusOK, gin.H{"available": !available})
 }
