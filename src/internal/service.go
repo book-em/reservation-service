@@ -306,3 +306,27 @@ func (s *service) AreThereReservationsOnDays(context context.Context, roomID uin
 	util.TEL.Debug("ok, room has no reservations on days", "room_id", roomID, "from", from, "to", to)
 	return false, nil
 }
+
+func (s *service) hasGuestActiveReservations(guestID uint) (bool, error) {
+	log.Print("hasGuestActiveReservations [1] User must be guest")
+
+	_, err := s.userClient.FindById(guestID)
+	if err != nil {
+		return false, ErrNotFound("user", guestID)
+	}
+
+	log.Print("hasGuestActiveReservations [2] Return")
+
+	reservations, err := s.repo.FindReservationsByGuestID(guestID)
+	if err != nil {
+		return false, err
+	}
+
+	for _, reservation := range reservations {
+		if reservation.GuestID == guestID && reservation.DateTo.After(time.Now()) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
