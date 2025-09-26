@@ -5,6 +5,7 @@ import (
 	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/util"
 	"context"
+	"log"
 	"time"
 )
 
@@ -37,6 +38,10 @@ type Service interface {
 	//
 	// Note that this is referring to RESERVATIONS and not RESERVATION REQUESTS.
 	AreThereReservationsOnDays(context context.Context, roomID uint, from, to time.Time) (bool, error)
+
+	// GetGuestActiveReservations checks whether a guest has any active reservations
+	// now or in the future.
+	GetGuestActiveReservations(guestID uint) ([]Reservation, error)
 }
 
 type service struct {
@@ -307,26 +312,27 @@ func (s *service) AreThereReservationsOnDays(context context.Context, roomID uin
 	return false, nil
 }
 
-func (s *service) hasGuestActiveReservations(guestID uint) (bool, error) {
-	log.Print("hasGuestActiveReservations [1] User must be guest")
+func (s *service) GetGuestActiveReservations(guestID uint) ([]Reservation, error) {
+	log.Print("GetGuestActiveReservations [1] User must be guest")
 
 	_, err := s.userClient.FindById(guestID)
 	if err != nil {
-		return false, ErrNotFound("user", guestID)
+		return nil, ErrNotFound("user", guestID)
 	}
 
-	log.Print("hasGuestActiveReservations [2] Return")
+	log.Print("GetGuestActiveReservations [2] Return")
 
-	reservations, err := s.repo.FindReservationsByGuestID(guestID)
+	allReservations, err := s.repo.FindReservationsByGuestID(guestID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	for _, reservation := range reservations {
-		if reservation.GuestID == guestID && reservation.DateTo.After(time.Now()) {
-			return true, nil
+	var activeReservations []Reservation
+	for _, reservation := range allReservations {
+		if reservation.GuestID == guestID && reservation.DateTo.After(time.Now()) && reservation.Cancelled == false {
+			activeReservations = append(activeReservations, reservation)
 		}
 	}
 
-	return false, nil
+	return activeReservations, nil
 }

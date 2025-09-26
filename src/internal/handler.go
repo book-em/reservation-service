@@ -20,6 +20,8 @@ func (r *Route) Route(rg *gin.RouterGroup) {
 	rg.DELETE("/req/:id", r.handler.deleteRequestByGuest)
 
 	rg.GET("/room/:id/availability", r.handler.checkAvailability)
+
+	rg.GET("/reservations/guest/active", r.handler.getGuestActiveReservations)
 }
 
 type Handler struct{ service Service }
@@ -212,4 +214,32 @@ func (h *Handler) checkAvailability(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"available": !available})
+}
+
+func (h *Handler) getGuestActiveReservations(ctx *gin.Context) {
+	log.Printf("getGuestActiveReservations called")
+
+	jwt, err := util.GetJwt(ctx)
+	if err != nil {
+		AbortError(ctx, ErrUnauthenticated)
+		return
+	}
+
+	if jwt.Role != userclient.Guest {
+		AbortError(ctx, ErrUnauthorized)
+		return
+	}
+
+	reservations, err := h.service.GetGuestActiveReservations(jwt.ID)
+	if err != nil {
+		AbortError(ctx, err)
+		return
+	}
+
+	result := make([]ReservationDTO, 0)
+	for _, res := range reservations {
+		result = append(result, NewReservationDTO(res))
+	}
+
+	ctx.JSON(http.StatusOK, result)
 }
