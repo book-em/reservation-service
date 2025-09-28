@@ -2,6 +2,7 @@ package roomclient
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,11 +11,11 @@ import (
 )
 
 type RoomClient interface {
-	FindById(it uint) (*RoomDTO, error)
+	FindById(context context.Context, it uint) (*RoomDTO, error)
 
-	FindCurrentAvailabilityListOfRoom(roomId uint) (*RoomAvailabilityListDTO, error)
-	FindCurrentPricelistOfRoom(roomId uint) (*RoomPriceListDTO, error)
-	QueryForReservation(jwt string, dto RoomReservationQueryDTO) (*RoomReservationQueryResponseDTO, error)
+	FindCurrentAvailabilityListOfRoom(context context.Context, roomId uint) (*RoomAvailabilityListDTO, error)
+	FindCurrentPricelistOfRoom(context context.Context, roomId uint) (*RoomPriceListDTO, error)
+	QueryForReservation(context context.Context, jwt string, dto RoomReservationQueryDTO) (*RoomReservationQueryResponseDTO, error)
 }
 
 type roomClient struct {
@@ -27,7 +28,7 @@ func NewRoomClient() RoomClient {
 	}
 }
 
-func (c *roomClient) FindById(id uint) (*RoomDTO, error) {
+func (c *roomClient) FindById(context context.Context, id uint) (*RoomDTO, error) {
 	log.Printf("Find room %d", id)
 
 	resp, err := http.Get(fmt.Sprintf("%s/%d", c.baseURL, id))
@@ -57,7 +58,7 @@ func (c *roomClient) FindById(id uint) (*RoomDTO, error) {
 	return &obj, nil
 }
 
-func (c *roomClient) FindCurrentAvailabilityListOfRoom(roomId uint) (*RoomAvailabilityListDTO, error) {
+func (c *roomClient) FindCurrentAvailabilityListOfRoom(context context.Context, roomId uint) (*RoomAvailabilityListDTO, error) {
 	log.Printf("Find current availability list of room %d", roomId)
 
 	resp, err := http.Get(fmt.Sprintf("%s/available/room/%d", c.baseURL, roomId))
@@ -87,7 +88,7 @@ func (c *roomClient) FindCurrentAvailabilityListOfRoom(roomId uint) (*RoomAvaila
 	return &obj, nil
 }
 
-func (c *roomClient) FindCurrentPricelistOfRoom(roomId uint) (*RoomPriceListDTO, error) {
+func (c *roomClient) FindCurrentPricelistOfRoom(context context.Context, roomId uint) (*RoomPriceListDTO, error) {
 	log.Printf("Find current price list of room %d", roomId)
 
 	resp, err := http.Get(fmt.Sprintf("%s/price/room/%d", c.baseURL, roomId))
@@ -117,7 +118,7 @@ func (c *roomClient) FindCurrentPricelistOfRoom(roomId uint) (*RoomPriceListDTO,
 	return &obj, nil
 }
 
-func (c *roomClient) QueryForReservation(jwt string, dto RoomReservationQueryDTO) (*RoomReservationQueryResponseDTO, error) {
+func (c *roomClient) QueryForReservation(context context.Context, jwt string, dto RoomReservationQueryDTO) (*RoomReservationQueryResponseDTO, error) {
 	log.Printf("Query room %d for potential reservation", dto.RoomID)
 
 	jsonBytes, err := json.Marshal(dto)

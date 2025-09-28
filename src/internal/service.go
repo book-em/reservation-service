@@ -4,6 +4,7 @@ import (
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/util"
+	"context"
 	"log"
 	"time"
 )
@@ -15,28 +16,28 @@ type AuthContext struct {
 }
 
 type Service interface {
-	CreateRequest(authctx AuthContext, dto CreateReservationRequestDTO) (*ReservationRequest, error)
+	CreateRequest(context context.Context, authctx AuthContext, dto CreateReservationRequestDTO) (*ReservationRequest, error)
 
 	// FindPendingRequestsByGuest answers the question:
 	//
 	// "which reservation requests have I created, that are not accepted or rejected?"
-	FindPendingRequestsByGuest(callerID uint) ([]ReservationRequest, error)
+	FindPendingRequestsByGuest(context context.Context, callerID uint) ([]ReservationRequest, error)
 
 	// FindPendingRequestsByRoom answers the question:
 	//
 	// "which reservation requests are there for this room, that are not accepted or rejected?"
-	FindPendingRequestsByRoom(callerID uint, roomID uint) ([]ReservationRequest, error)
+	FindPendingRequestsByRoom(context context.Context, callerID uint, roomID uint) ([]ReservationRequest, error)
 
 	// DeleteRequest removes a reservation request by the guest. This happens
 	// when the guest changes his mind before the request has been processed
 	// (accepted/rejected).
-	DeleteRequest(callerID uint, requestID uint) error
+	DeleteRequest(context context.Context, callerID uint, requestID uint) error
 
 	// AreThereReservationsOnDays checks if a room has reservations in the
 	// specified date range.
 	//
 	// Note that this is referring to RESERVATIONS and not RESERVATION REQUESTS.
-	AreThereReservationsOnDays(roomID uint, from, to time.Time) (bool, error)
+	AreThereReservationsOnDays(context context.Context, roomID uint, from, to time.Time) (bool, error)
 }
 
 type service struct {
@@ -52,13 +53,13 @@ func NewService(
 	return &service{roomRepo, userClient, roomClient}
 }
 
-func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationRequestDTO) (*ReservationRequest, error) {
+func (s *service) CreateRequest(context context.Context, authctx AuthContext, dto CreateReservationRequestDTO) (*ReservationRequest, error) {
 	callerID := authctx.CallerID
 	jwt := authctx.JWT
 
 	log.Print("CreateRequest [1] Find user")
 
-	user, err := s.userClient.FindById(callerID)
+	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
 	if err != nil {
 		return nil, ErrUnauthenticated
 	}
@@ -71,21 +72,21 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 
 	log.Print("CreateRequest [3] Find room")
 
-	room, err := s.roomClient.FindById(dto.RoomID)
+	room, err := s.roomClient.FindById(util.TEL.Ctx(), dto.RoomID)
 	if err != nil {
 		return nil, ErrNotFound("room", dto.RoomID)
 	}
 
 	log.Print("CreateRequest [4] Find room availability list")
 
-	availList, err := s.roomClient.FindCurrentAvailabilityListOfRoom(room.ID)
+	availList, err := s.roomClient.FindCurrentAvailabilityListOfRoom(util.TEL.Ctx(), room.ID)
 	if err != nil {
 		return nil, ErrNotFound("room availability list", dto.RoomID)
 	}
 
 	log.Print("CreateRequest [5] Find room price list")
 
-	pricelist, err := s.roomClient.FindCurrentPricelistOfRoom(room.ID)
+	pricelist, err := s.roomClient.FindCurrentPricelistOfRoom(util.TEL.Ctx(), room.ID)
 	if err != nil {
 		return nil, ErrNotFound("room price list", dto.RoomID)
 	}
@@ -98,7 +99,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 		DateTo:     dto.DateTo,
 		GuestCount: dto.GuestCount,
 	}
-	queryResponse, err := s.roomClient.QueryForReservation(jwt, queryDTO)
+	queryResponse, err := s.roomClient.QueryForReservation(util.TEL.Ctx(), jwt, queryDTO)
 	if err != nil {
 		return nil, ErrBadRequest
 	}
@@ -138,7 +139,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 
 	log.Print("CreateRequest [10] Check if this room has a reservation for this date range")
 
-	has, err := s.AreThereReservationsOnDays(dto.RoomID, dto.DateFrom, dto.DateTo)
+	has, err := s.AreThereReservationsOnDays(util.TEL.Ctx(), dto.RoomID, dto.DateFrom, dto.DateTo)
 	if err != nil {
 		return nil, err
 	}
@@ -165,10 +166,10 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 	return req, nil
 }
 
-func (s *service) FindPendingRequestsByGuest(callerID uint) ([]ReservationRequest, error) {
+func (s *service) FindPendingRequestsByGuest(context context.Context, callerID uint) ([]ReservationRequest, error) {
 	log.Print("FindPendingRequestsByGuest [1] Find user")
 
-	user, err := s.userClient.FindById(callerID)
+	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
 	if err != nil {
 		return nil, ErrNotFound("user", callerID)
 	}
@@ -184,10 +185,10 @@ func (s *service) FindPendingRequestsByGuest(callerID uint) ([]ReservationReques
 	return s.repo.FindPendingRequestsByGuestID(callerID)
 }
 
-func (s *service) FindPendingRequestsByRoom(callerID uint, roomID uint) ([]ReservationRequest, error) {
+func (s *service) FindPendingRequestsByRoom(context context.Context, callerID uint, roomID uint) ([]ReservationRequest, error) {
 	log.Print("FindPendingRequestsByRoom [1] User must be guest")
 
-	user, err := s.userClient.FindById(callerID)
+	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
 	if err != nil {
 		return nil, ErrNotFound("user", callerID)
 	}
@@ -200,7 +201,7 @@ func (s *service) FindPendingRequestsByRoom(callerID uint, roomID uint) ([]Reser
 
 	log.Print("FindPendingRequestsByRoom [3] Find room")
 
-	room, err := s.roomClient.FindById(roomID)
+	room, err := s.roomClient.FindById(util.TEL.Ctx(), roomID)
 	if err != nil {
 		return nil, ErrNotFound("room", roomID)
 	}
@@ -216,10 +217,10 @@ func (s *service) FindPendingRequestsByRoom(callerID uint, roomID uint) ([]Reser
 	return s.repo.FindPendingRequestsByRoomID(roomID)
 }
 
-func (s *service) DeleteRequest(callerID uint, requestID uint) error {
+func (s *service) DeleteRequest(context context.Context, callerID uint, requestID uint) error {
 	log.Print("DeleteRequest [1] Find user")
 
-	user, err := s.userClient.FindById(callerID)
+	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
 	if err != nil {
 		return ErrNotFound("user", callerID)
 	}
@@ -260,7 +261,7 @@ func (s *service) DeleteRequest(callerID uint, requestID uint) error {
 	return s.repo.DeleteRequest(requestID)
 }
 
-func (s *service) AreThereReservationsOnDays(roomID uint, from, to time.Time) (bool, error) {
+func (s *service) AreThereReservationsOnDays(context context.Context, roomID uint, from, to time.Time) (bool, error) {
 	log.Printf("AreThereReservationsOnDays [1] Checking if room %d has a reservation from %s to %s", roomID, from.String(), to.String())
 
 	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
