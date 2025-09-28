@@ -1,7 +1,6 @@
 package util
 
 import (
-	"bookem-reservation-service/client/userclient"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,10 +9,18 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type UserRole string
+
+const (
+	Guest UserRole = "guest"
+	Host  UserRole = "host"
+	Admin UserRole = "admin"
+)
+
 type Jwt struct {
 	ID       uint
 	Username string
-	Role     userclient.UserRole
+	Role     UserRole
 }
 
 func GetJwtString(ctx *gin.Context) (string, error) {
@@ -57,7 +64,7 @@ func GetJwt(ctx *gin.Context) (*Jwt, error) {
 	jwt := Jwt{
 		ID:       uint(jwtData["sub"].(float64)),
 		Username: jwtData["username"].(string),
-		Role:     userclient.UserRole(jwtData["role"].(string)),
+		Role:     UserRole(jwtData["role"].(string)),
 	}
 
 	return &jwt, nil
@@ -72,7 +79,7 @@ func GetJwtFromString(jwtString string) (*Jwt, error) {
 	jwt := Jwt{
 		ID:       uint(jwtData["sub"].(float64)),
 		Username: jwtData["username"].(string),
-		Role:     userclient.UserRole(jwtData["role"].(string)),
+		Role:     UserRole(jwtData["role"].(string)),
 	}
 
 	return &jwt, nil

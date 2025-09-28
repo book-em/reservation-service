@@ -1,8 +1,8 @@
 package test
 
 import (
-	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/internal"
+	"bookem-reservation-service/util"
 	"net/http"
 	"testing"
 	"time"
@@ -14,7 +14,7 @@ import (
 func TestCreateReservationRequest_HappyPath(t *testing.T) {
 	_, _, _, room := SetupHostRoomAvailabilityPrice("host_001", t)
 
-	RegisterUser("guest_001", "pass", userclient.Guest)
+	RegisterUser("guest_001", "pass", util.Guest)
 	jwt := LoginUser2("guest_001", "pass")
 
 	dto := internal.CreateReservationRequestDTO{
@@ -35,7 +35,7 @@ func TestCreateReservationRequest_HappyPath(t *testing.T) {
 func TestCreateReservationRequest_DuplicateRequestForSameRoom(t *testing.T) {
 	_, _, _, room := SetupHostRoomAvailabilityPrice("host_002", t)
 
-	RegisterUser("guest_002", "pass", userclient.Guest)
+	RegisterUser("guest_002", "pass", util.Guest)
 	jwt := LoginUser2("guest_002", "pass")
 
 	dto := internal.CreateReservationRequestDTO{

@@ -65,7 +65,7 @@ func (s *service) CreateRequest(authctx AuthContext, dto CreateReservationReques
 
 	log.Print("CreateRequest [2] User must be a Guest")
 
-	if user.Role != string(userclient.Guest) {
+	if user.Role != string(util.Guest) {
 		return nil, ErrUnauthorized
 	}
 
@@ -175,7 +175,7 @@ func (s *service) FindPendingRequestsByGuest(callerID uint) ([]ReservationReques
 
 	log.Print("FindPendingRequestsByGuest [2] User must be guest")
 
-	if user.Role != string(userclient.Guest) {
+	if user.Role != string(util.Guest) {
 		return nil, ErrUnauthorized
 	}
 
@@ -194,7 +194,7 @@ func (s *service) FindPendingRequestsByRoom(callerID uint, roomID uint) ([]Reser
 
 	log.Print("FindPendingRequestsByRoom [2] User must be host")
 
-	if user.Role != string(userclient.Host) {
+	if user.Role != string(util.Host) {
 		return nil, ErrUnauthorized
 	}
 
@@ -226,7 +226,7 @@ func (s *service) DeleteRequest(callerID uint, requestID uint) error {
 
 	log.Print("DeleteRequest [2] User must be guest")
 
-	if user.Role != string(userclient.Guest) {
+	if user.Role != string(util.Guest) {
 		return ErrUnauthorized
 	}
 
