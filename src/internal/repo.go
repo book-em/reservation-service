@@ -23,6 +23,7 @@ type Repository interface {
 	FindReservationsByRoomIDForDay(roomID uint, day time.Time) ([]Reservation, error)
 	FindReservationsByGuestID(guestID uint) ([]Reservation, error)
 	CountGuestCancellations(guestID uint) (int64, error)
+	FindReservationsByRoomID(roomID uint) ([]Reservation, error)
 }
 
 type repository struct {
@@ -98,5 +99,11 @@ func (r *repository) FindPendingRequestsByGuestID(guestID uint) ([]ReservationRe
 func (r *repository) FindReservationsByGuestID(guestID uint) ([]Reservation, error) {
 	var reservations []Reservation
 	err := r.db.Where("guest_id = ?", guestID).Find(&reservations).Error
+	return reservations, err
+}
+
+func (r *repository) FindReservationsByRoomID(roomID uint) ([]Reservation, error) {
+	var reservations []Reservation
+	err := r.db.Where("room_id = ?", roomID).Find(&reservations).Error
 	return reservations, err
 }
