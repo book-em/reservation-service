@@ -2,6 +2,7 @@ package test
 
 import (
 	"bookem-reservation-service/internal"
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ func Test_AreThereReservationsOnDays_AllDaysFree(t *testing.T) {
 	from := time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2025, 9, 3, 0, 0, 0, 0, time.UTC)
 
-	result, err := svc.AreThereReservationsOnDays(1, from, to)
+	result, err := svc.AreThereReservationsOnDays(context.Background(), 1, from, to)
 
 	assert.NoError(t, err)
 	assert.False(t, result)
@@ -38,7 +39,7 @@ func Test_AreThereReservationsOnDays_OneDayBooked(t *testing.T) {
 	from := time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2025, 9, 3, 0, 0, 0, 0, time.UTC)
 
-	result, err := svc.AreThereReservationsOnDays(1, from, to)
+	result, err := svc.AreThereReservationsOnDays(context.Background(), 1, from, to)
 
 	assert.NoError(t, err)
 	assert.True(t, result)
@@ -53,7 +54,7 @@ func Test_AreThereReservationsOnDays_RepoError(t *testing.T) {
 	from := time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2025, 9, 2, 0, 0, 0, 0, time.UTC)
 
-	result, err := svc.AreThereReservationsOnDays(1, from, to)
+	result, err := svc.AreThereReservationsOnDays(context.Background(), 1, from, to)
 
 	assert.Error(t, err)
 	assert.False(t, result)
