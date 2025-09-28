@@ -56,3 +56,7 @@ func NewReservationDTO(r Reservation) ReservationDTO {
 		Cost:       r.Cost,
 	}
 }
+
+type RoomIDsDTO struct {
+	IDs []uint `json:"ids"`
+}
