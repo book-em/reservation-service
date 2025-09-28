@@ -5,7 +5,6 @@ import (
 	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/util"
 	"context"
-	"log"
 	"time"
 )
 
@@ -57,42 +56,49 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 	callerID := authctx.CallerID
 	jwt := authctx.JWT
 
-	log.Print("CreateRequest [1] Find user")
+	util.TEL.Eventf("user %d wants to create a reservation request", nil, authctx.CallerID)
 
+	util.TEL.Push(context, "validate-room-and-user")
+	defer util.TEL.Pop()
+
+	util.TEL.Eventf("check if user %d exists", nil, callerID)
 	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
 	if err != nil {
+		util.TEL.Eventf("user %d does not exist", err, callerID)
 		return nil, ErrUnauthenticated
 	}
 
-	log.Print("CreateRequest [2] User must be a Guest")
-
+	util.TEL.Eventf("check if user %d is a guest", nil, callerID)
 	if user.Role != string(util.Guest) {
+		util.TEL.Eventf("user has a bad role (%s)", nil, user.Role)
 		return nil, ErrUnauthorized
 	}
 
-	log.Print("CreateRequest [3] Find room")
-
+	util.TEL.Eventf("find room", nil)
 	room, err := s.roomClient.FindById(util.TEL.Ctx(), dto.RoomID)
 	if err != nil {
+		util.TEL.Eventf("room not found %d", err, dto.RoomID)
 		return nil, ErrNotFound("room", dto.RoomID)
 	}
 
-	log.Print("CreateRequest [4] Find room availability list")
-
+	util.TEL.Eventf("find room availability list", nil)
 	availList, err := s.roomClient.FindCurrentAvailabilityListOfRoom(util.TEL.Ctx(), room.ID)
 	if err != nil {
+		util.TEL.Eventf("room availability list of room %d not found", err, dto.RoomID)
 		return nil, ErrNotFound("room availability list", dto.RoomID)
 	}
 
-	log.Print("CreateRequest [5] Find room price list")
-
+	util.TEL.Eventf("find room price list", nil)
 	pricelist, err := s.roomClient.FindCurrentPricelistOfRoom(util.TEL.Ctx(), room.ID)
 	if err != nil {
+		util.TEL.Eventf("room price list of room %d not found", err, dto.RoomID)
 		return nil, ErrNotFound("room price list", dto.RoomID)
 	}
 
-	log.Print("CreateRequest [6] Query room for reservation data")
+	util.TEL.Push(context, "query-for-reservation")
+	defer util.TEL.Pop()
 
+	util.TEL.Eventf("query room for reservation data", nil)
 	queryDTO := roomclient.RoomReservationQueryDTO{
 		RoomID:     room.ID,
 		DateFrom:   dto.DateFrom,
@@ -101,53 +107,61 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 	}
 	queryResponse, err := s.roomClient.QueryForReservation(util.TEL.Ctx(), jwt, queryDTO)
 	if err != nil {
+		util.TEL.Eventf("could not query room %d for reservation", err, dto.RoomID)
 		return nil, ErrBadRequest
 	}
 
 	if !queryResponse.Available {
-		log.Print("Room is not available at this time range")
+		util.TEL.Eventf("room is not available at this time", err)
 		return nil, ErrBadRequest
 	}
 
-	log.Print("CreateRequest [7] Calculate price")
-
+	util.TEL.Eventf("calculate price", nil)
 	cost := queryResponse.TotalCost
 
-	log.Print("CreateRequest [8] Validate fields")
+	util.TEL.Push(context, "validate-reservation-request")
+	defer util.TEL.Pop()
 
+	util.TEL.Eventf("validate fields", nil)
 	if dto.GuestCount < 1 {
+		util.TEL.Eventf("guest count must be at least 1 (got %d)", err, dto.GuestCount)
 		return nil, ErrBadRequestCustom("guest count must be at least 1")
 	}
 
 	if dto.DateFrom.After(dto.DateTo) {
+		util.TEL.Eventf("dates are reversed (got from %d to %d)", err, dto.DateFrom.String(), dto.DateTo.String())
 		return nil, ErrBadRequestCustom("dates are reversed")
 	}
 
-	log.Print("CreateRequest [9] Prevent overlapping requests for the same room and same guest")
-
+	util.TEL.Eventf("prevent overlapping requests for the same room and same guest", nil)
 	existing, err := s.repo.FindPendingRequestsByGuestID(callerID)
 	if err != nil {
+		util.TEL.Eventf("could not find pending reservation requests of guest %d", err, callerID)
 		return nil, err
 	}
 	for _, req := range existing {
 		if req.RoomID == dto.RoomID {
 			if util.AreDatesIntersecting(req.DateFrom, req.DateTo, dto.DateFrom, dto.DateTo) {
+				util.TEL.Eventf("user already has request for room at [%s - %s], but he now wants [%s - %s] (intersection)", nil, req.DateFrom.String(), req.DateTo.String(), dto.DateFrom.String(), dto.DateTo.String())
 				return nil, ErrConflict
 			}
 		}
 	}
 
-	log.Print("CreateRequest [10] Check if this room has a reservation for this date range")
+	util.TEL.Eventf("xheck if this room has a reservation for this date range", nil)
 
 	has, err := s.AreThereReservationsOnDays(util.TEL.Ctx(), dto.RoomID, dto.DateFrom, dto.DateTo)
 	if err != nil {
+		util.TEL.Eventf("could not check for reservations for room %d for date range [%s - %s]", err, dto.RoomID, dto.DateFrom.String(), dto.DateTo.String())
 		return nil, err
 	}
 	if has {
+		util.TEL.Eventf("room has a reservation for this date range, cannot create a request", nil)
 		return nil, ErrConflict
 	}
 
-	log.Print("CreateRequest [11] Create request")
+	util.TEL.Push(context, "create-reservation-request-in-db")
+	defer util.TEL.Pop()
 
 	req := &ReservationRequest{
 		RoomID:             dto.RoomID,
@@ -161,83 +175,94 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 		Cost:               cost,
 	}
 	if err := s.repo.CreateRequest(req); err != nil {
+		util.TEL.Eventf("failed creating a reservation request", err)
 		return nil, err
 	}
 	return req, nil
 }
 
 func (s *service) FindPendingRequestsByGuest(context context.Context, callerID uint) ([]ReservationRequest, error) {
-	log.Print("FindPendingRequestsByGuest [1] Find user")
+	util.TEL.Eventf("user %s wants to see his pending reservation requests", nil, callerID)
 
+	util.TEL.Eventf("check if user %d exists", nil, callerID)
 	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
 	if err != nil {
+		util.TEL.Eventf("user %d does not exist", err, callerID)
 		return nil, ErrNotFound("user", callerID)
 	}
 
-	log.Print("FindPendingRequestsByGuest [2] User must be guest")
-
+	util.TEL.Eventf("check if user %d is a guest", nil, callerID)
 	if user.Role != string(util.Guest) {
+		util.TEL.Eventf("user has a bad role (%s)", nil, user.Role)
 		return nil, ErrUnauthorized
 	}
 
-	log.Print("FindPendingRequestsByGuest [3] Return")
-
+	util.TEL.Push(context, "find-pending-reservation-requests-by-guest-in-db")
+	defer util.TEL.Pop()
 	return s.repo.FindPendingRequestsByGuestID(callerID)
 }
 
 func (s *service) FindPendingRequestsByRoom(context context.Context, callerID uint, roomID uint) ([]ReservationRequest, error) {
-	log.Print("FindPendingRequestsByRoom [1] User must be guest")
+	util.TEL.Eventf("user %s wants to see pending reservation requests for room %d", nil, callerID, roomID)
 
+	util.TEL.Eventf("check if user %d exists", nil, callerID)
 	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
 	if err != nil {
+		util.TEL.Eventf("user %d does not exist", err, callerID)
 		return nil, ErrNotFound("user", callerID)
 	}
 
-	log.Print("FindPendingRequestsByRoom [2] User must be host")
-
+	util.TEL.Eventf("check if user %d is a host", nil, callerID)
 	if user.Role != string(util.Host) {
+		util.TEL.Eventf("user has a bad role (%s)", nil, user.Role)
 		return nil, ErrUnauthorized
 	}
 
-	log.Print("FindPendingRequestsByRoom [3] Find room")
+	util.TEL.Eventf("find room %d", nil, roomID)
 
 	room, err := s.roomClient.FindById(util.TEL.Ctx(), roomID)
 	if err != nil {
+		util.TEL.Eventf("room %d does not exist", err, callerID)
 		return nil, ErrNotFound("room", roomID)
 	}
 
-	log.Print("FindPendingRequestsByRoom [4] Host must be the owner of this room")
+	util.TEL.Eventf("user must be owner of the room", nil)
 
 	if room.HostID != callerID {
+		util.TEL.Eventf("user is not owner of the room (want %d, owner is %d)", nil, callerID, room.HostID)
+
 		return nil, ErrUnauthorized
 	}
 
-	log.Print("FindPendingRequestsByRoom [5] Return")
-
+	util.TEL.Push(context, "find-pending-reservation-requests-by-room-in-db")
+	defer util.TEL.Pop()
 	return s.repo.FindPendingRequestsByRoomID(roomID)
 }
 
 func (s *service) DeleteRequest(context context.Context, callerID uint, requestID uint) error {
-	log.Print("DeleteRequest [1] Find user")
+	util.TEL.Eventf("user %s wants delete reservation request %d", nil, callerID, requestID)
 
+	util.TEL.Eventf("check if user %d exists", nil, callerID)
 	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
 	if err != nil {
+		util.TEL.Eventf("user %d does not exist", err, callerID)
 		return ErrNotFound("user", callerID)
 	}
 
-	log.Print("DeleteRequest [2] User must be guest")
-
+	util.TEL.Eventf("check if user %d is a guest", nil, callerID)
 	if user.Role != string(util.Guest) {
+		util.TEL.Eventf("user has a bad role (%s)", nil, user.Role)
 		return ErrUnauthorized
 	}
 
-	log.Print("DeleteRequest [3] Find request")
-
+	util.TEL.Eventf("find all reservation requests by user in db", nil)
 	requests, err := s.repo.FindPendingRequestsByGuestID(callerID)
 	if err != nil {
+		util.TEL.Eventf("could not find reservation requests of user %d", err, callerID)
 		return err
 	}
 	found := false
+	util.TEL.Eventf("find reservation request by id", nil)
 	var request *ReservationRequest
 	for _, req := range requests {
 		if req.ID == requestID {
@@ -246,38 +271,40 @@ func (s *service) DeleteRequest(context context.Context, callerID uint, requestI
 			break
 		}
 	}
+
 	if !found {
+		util.TEL.Eventf("could not find reservation request by id %d of user %d", err, requestID, callerID)
 		return ErrNotFound("reservation request", requestID)
 	}
 
-	log.Print("DeleteRequest [4] Request must be pending")
-
 	if request.Status != Pending {
+		util.TEL.Eventf("request isn't pending (status is %s)", nil, request.Status)
 		return ErrBadRequestCustom("cannot cancel a handled request")
 	}
 
-	log.Print("DeleteRequest [5] Delete")
+	util.TEL.Push(context, "delete-request-in-db")
+	defer util.TEL.Pop()
 
 	return s.repo.DeleteRequest(requestID)
 }
 
 func (s *service) AreThereReservationsOnDays(context context.Context, roomID uint, from, to time.Time) (bool, error) {
-	log.Printf("AreThereReservationsOnDays [1] Checking if room %d has a reservation from %s to %s", roomID, from.String(), to.String())
+	util.TEL.Eventf("checking if room %d has reservations on days [%s - %s] ", nil, roomID, from.String(), to.String())
 
 	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
-		log.Printf("AreThereReservationsOnDays [1.x] Checking if room %d has a reservation on day %s", roomID, d.String())
+		util.TEL.Eventf("checking if room %d has a reservation on day %s ", nil, roomID, d.String())
+
 		reservations, err := s.repo.FindReservationsByRoomIDForDay(roomID, d)
 		if err != nil {
-			log.Printf("AreThereReservationsOnDays [1.x] Error %s", err.Error())
+			util.TEL.Eventf("could not find reservations for room %d on day %s", err, roomID, d.String())
 			return false, err
 		}
 		if len(reservations) > 0 {
-			log.Printf("AreThereReservationsOnDays [1.x] Reservation found on day %s", d.String())
+			util.TEL.Eventf("reservation for room %d found on day %s", nil, roomID, d.String())
 			return true, nil
 		}
 	}
 
-	log.Printf("AreThereReservationsOnDays [2] OK, no reservations found for room %d", roomID)
-
+	util.TEL.Eventf("ok, no room %d has no reservations on days [%s - %s] ", nil, roomID, from.String(), to.String())
 	return false, nil
 }
