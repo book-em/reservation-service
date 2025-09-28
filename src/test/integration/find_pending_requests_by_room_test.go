@@ -1,8 +1,8 @@
 package test
 
 import (
-	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/internal"
+	"bookem-reservation-service/util"
 	"net/http"
 	"testing"
 	"time"
@@ -15,7 +15,7 @@ func TestFindPendingRequestByRoom(t *testing.T) {
 	hostUsername := "host_006"
 	_, _, hostJwt, room := SetupHostRoomAvailabilityPrice(hostUsername, t)
 
-	RegisterUser("guest_006", "pass", userclient.Guest)
+	RegisterUser("guest_006", "pass", util.Guest)
 	guestJwt := LoginUser2("guest_006", "pass")
 
 	dto := internal.CreateReservationRequestDTO{

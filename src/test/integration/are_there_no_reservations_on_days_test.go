@@ -1,8 +1,8 @@
 package test
 
 import (
-	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/internal"
+	"bookem-reservation-service/util"
 	"testing"
 	"time"
 )
@@ -12,7 +12,7 @@ func TestCheckRoomAvailability(t *testing.T) {
 	_, _, _, room := SetupHostRoomAvailabilityPrice(hostUsername, t)
 
 	// Register and login guest
-	RegisterUser("guest_008", "pass", userclient.Guest)
+	RegisterUser("guest_008", "pass", util.Guest)
 	guestJwt := LoginUser2("guest_008", "pass")
 
 	// Create a reservation request for a specific date range
