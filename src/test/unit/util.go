@@ -4,6 +4,7 @@ import (
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/internal"
+	"context"
 	"time"
 
 	mock "github.com/stretchr/testify/mock"
@@ -100,8 +101,8 @@ type MockUserClient struct {
 	mock.Mock
 }
 
-func (r *MockUserClient) FindById(id uint) (*userclient.UserDTO, error) {
-	args := r.Called(id)
+func (r *MockUserClient) FindById(context context.Context, id uint) (*userclient.UserDTO, error) {
+	args := r.Called(context, id)
 	user, _ := args.Get(0).(*userclient.UserDTO)
 	return user, args.Error(1)
 }
@@ -112,26 +113,26 @@ type MockRoomClient struct {
 	mock.Mock
 }
 
-func (r *MockRoomClient) FindById(id uint) (*roomclient.RoomDTO, error) {
-	args := r.Called(id)
+func (r *MockRoomClient) FindById(context context.Context, id uint) (*roomclient.RoomDTO, error) {
+	args := r.Called(context, id)
 	room, _ := args.Get(0).(*roomclient.RoomDTO)
 	return room, args.Error(1)
 }
 
-func (r *MockRoomClient) FindCurrentAvailabilityListOfRoom(roomId uint) (*roomclient.RoomAvailabilityListDTO, error) {
-	args := r.Called(roomId)
+func (r *MockRoomClient) FindCurrentAvailabilityListOfRoom(context context.Context, roomId uint) (*roomclient.RoomAvailabilityListDTO, error) {
+	args := r.Called(context, roomId)
 	list, _ := args.Get(0).(*roomclient.RoomAvailabilityListDTO)
 	return list, args.Error(1)
 }
 
-func (r *MockRoomClient) FindCurrentPricelistOfRoom(roomId uint) (*roomclient.RoomPriceListDTO, error) {
-	args := r.Called(roomId)
+func (r *MockRoomClient) FindCurrentPricelistOfRoom(context context.Context, roomId uint) (*roomclient.RoomPriceListDTO, error) {
+	args := r.Called(context, roomId)
 	list, _ := args.Get(0).(*roomclient.RoomPriceListDTO)
 	return list, args.Error(1)
 }
 
-func (r *MockRoomClient) QueryForReservation(jwt string, dto roomclient.RoomReservationQueryDTO) (*roomclient.RoomReservationQueryResponseDTO, error) {
-	args := r.Called(jwt, dto)
+func (r *MockRoomClient) QueryForReservation(context context.Context, jwt string, dto roomclient.RoomReservationQueryDTO) (*roomclient.RoomReservationQueryResponseDTO, error) {
+	args := r.Called(context, jwt, dto)
 	resp, _ := args.Get(0).(*roomclient.RoomReservationQueryResponseDTO)
 	return resp, args.Error(1)
 }
