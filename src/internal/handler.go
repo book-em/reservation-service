@@ -21,7 +21,7 @@ func (r *Route) Route(rg *gin.RouterGroup) {
 
 	rg.GET("/room/:id/availability", r.handler.checkAvailability)
 
-	rg.GET("/reservations/guest/active", r.handler.getGuestActiveReservations)
+	rg.GET("/reservations/guest/active", r.handler.getActiveGuestReservations)
 }
 
 type Handler struct{ service Service }
@@ -216,8 +216,8 @@ func (h *Handler) checkAvailability(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"available": !available})
 }
 
-func (h *Handler) getGuestActiveReservations(ctx *gin.Context) {
-	log.Printf("getGuestActiveReservations called")
+func (h *Handler) getActiveGuestReservations(ctx *gin.Context) {
+	log.Printf("getActiveGuestReservations called")
 
 	jwt, err := util.GetJwt(ctx)
 	if err != nil {
@@ -230,7 +230,7 @@ func (h *Handler) getGuestActiveReservations(ctx *gin.Context) {
 		return
 	}
 
-	reservations, err := h.service.GetGuestActiveReservations(jwt.ID)
+	reservations, err := h.service.GetActiveGuestReservations(jwt.ID)
 	if err != nil {
 		AbortError(ctx, err)
 		return
