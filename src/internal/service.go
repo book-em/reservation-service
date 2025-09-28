@@ -39,9 +39,17 @@ type Service interface {
 	// Note that this is referring to RESERVATIONS and not RESERVATION REQUESTS.
 	AreThereReservationsOnDays(context context.Context, roomID uint, from, to time.Time) (bool, error)
 
-	// GetGuestActiveReservations checks whether a guest has any active reservations
+	// GetActiveGuestReservations checks whether a guest has any active reservations
 	// now or in the future.
-	GetGuestActiveReservations(guestID uint) ([]Reservation, error)
+	GetActiveGuestReservations(guestID uint) ([]Reservation, error)
+
+	// GetActiveHostReservations checks whether a host has any active reservations
+	// now or in the future.
+	GetActiveHostReservations(hostID uint, roomIDs []uint) ([]Reservation, error)
+
+	// ExtractActiveReservations filters the provided list of reservations
+	// and returns only the active ones.
+	ExtractActiveReservations(reservations []Reservation) []Reservation
 }
 
 type service struct {
@@ -312,27 +320,60 @@ func (s *service) AreThereReservationsOnDays(context context.Context, roomID uin
 	return false, nil
 }
 
-func (s *service) GetGuestActiveReservations(guestID uint) ([]Reservation, error) {
-	log.Print("GetGuestActiveReservations [1] User must be guest")
+func (s *service) GetActiveGuestReservations(guestID uint) ([]Reservation, error) {
+	log.Print("GetActiveGuestReservations [1] User must be guest")
 
 	_, err := s.userClient.FindById(guestID)
 	if err != nil {
 		return nil, ErrNotFound("user", guestID)
 	}
 
-	log.Print("GetGuestActiveReservations [2] Return")
+	log.Print("GetActiveGuestReservations [2]  Find all reservations")
 
 	allReservations, err := s.repo.FindReservationsByGuestID(guestID)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Print("GetActiveGuestReservations [3] Return")
+
+	activeReservations := s.ExtractActiveReservations(allReservations)
+
+	return activeReservations, nil
+}
+
+func (s *service) GetActiveHostReservations(hostID uint, roomIDs []uint) ([]Reservation, error) {
+	log.Print("GetActiveHostReservations [1] User must be host")
+
+	_, err := s.userClient.FindById(hostID)
+	if err != nil {
+		return nil, ErrNotFound("user", hostID)
+	}
+
+	log.Print("GetActiveHostReservations [2] Find all reservations from all rooms")
+
+	var allReservations []Reservation
+	for _, roomID := range roomIDs {
+		roomReservations, err := s.repo.FindReservationsByRoomID(roomID)
+		if err != nil {
+			return nil, err
+		}
+		allReservations = append(allReservations, roomReservations...)
+	}
+
+	log.Print("GetActiveHostReservations [3] Return")
+
+	activeReservations := s.ExtractActiveReservations(allReservations)
+
+	return activeReservations, nil
+}
+
+func (s *service) ExtractActiveReservations(reservations []Reservation) []Reservation {
 	var activeReservations []Reservation
-	for _, reservation := range allReservations {
-		if reservation.GuestID == guestID && reservation.DateTo.After(time.Now()) && reservation.Cancelled == false {
+	for _, reservation := range reservations {
+		if reservation.DateTo.After(time.Now()) && reservation.Cancelled == false {
 			activeReservations = append(activeReservations, reservation)
 		}
 	}
-
-	return activeReservations, nil
+	return activeReservations
 }
