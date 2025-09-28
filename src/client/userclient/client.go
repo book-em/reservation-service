@@ -1,12 +1,15 @@
 package userclient
 
 import (
+	"bookem-reservation-service/util"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 type UserClient interface {
@@ -24,29 +27,36 @@ func NewUserClient() UserClient {
 }
 
 func (c *userClient) FindById(context context.Context, id uint) (*UserDTO, error) {
-	log.Printf("Find user %d", id)
+	util.TEL.Eventf("find user %d", nil, id)
 
-	resp, err := http.Get(fmt.Sprintf("%s/%d", c.baseURL, id))
-
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/%d", c.baseURL, id), nil)
 	if err != nil {
-		log.Printf("Error %v", err)
+		util.TEL.Eventf("could not create request", err)
+		return nil, err
+	}
+	otel.GetTextMapPropagator().Inject(context, propagation.HeaderCarrier(req.Header))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		util.TEL.Eventf("could not send request", err)
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("User %d not found: http %d", id, resp.StatusCode)
+		util.TEL.Eventf("user %d not found: http %d", nil, id, resp.StatusCode)
 		return nil, fmt.Errorf("user %d not found", id)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Parsing response error: %v", err)
+		util.TEL.Eventf("could not parse bytes from response", err)
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	var obj UserDTO
 	if err := json.Unmarshal(bodyBytes, &obj); err != nil {
-		log.Printf("JSON Unmarshall error: %v", err)
+		util.TEL.Eventf("could not unmarshall JSON", err)
 		return nil, err
 	}
 
