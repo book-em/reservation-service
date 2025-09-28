@@ -1,8 +1,8 @@
 package test
 
 import (
-	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/internal"
+	"bookem-reservation-service/util"
 	"net/http"
 	"testing"
 	"time"
@@ -14,7 +14,7 @@ import (
 func TestDeleteReservationRequest(t *testing.T) {
 	_, _, _, room := SetupHostRoomAvailabilityPrice("host_007", t)
 
-	RegisterUser("guest_007", "pass", userclient.Guest)
+	RegisterUser("guest_007", "pass", util.Guest)
 	jwt := LoginUser2("guest_007", "pass")
 
 	dto := internal.CreateReservationRequestDTO{

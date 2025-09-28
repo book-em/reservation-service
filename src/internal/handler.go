@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/util"
 	"log"
 	"net/http"
@@ -41,7 +40,7 @@ func (h *Handler) createReservationRequest(ctx *gin.Context) {
 		return
 	}
 
-	if jwt.Role != userclient.Guest {
+	if jwt.Role != util.Guest {
 		AbortError(ctx, ErrUnauthorized)
 		return
 	}
@@ -70,7 +69,7 @@ func (h *Handler) findPendingRequestsByGuest(ctx *gin.Context) {
 		return
 	}
 
-	if jwt.Role != userclient.Guest {
+	if jwt.Role != util.Guest {
 		AbortError(ctx, ErrUnauthorized)
 		return
 	}
@@ -105,7 +104,7 @@ func (h *Handler) findPendingRequestsByRoom(ctx *gin.Context) {
 		return
 	}
 
-	if jwt.Role != userclient.Host {
+	if jwt.Role != util.Host {
 		AbortError(ctx, ErrUnauthorized)
 		return
 	}
@@ -140,7 +139,7 @@ func (h *Handler) deleteRequestByGuest(ctx *gin.Context) {
 		return
 	}
 
-	if jwt.Role != userclient.Guest {
+	if jwt.Role != util.Guest {
 		AbortError(ctx, ErrUnauthorized)
 		return
 	}

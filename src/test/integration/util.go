@@ -36,7 +36,7 @@ func GenName(length int) string {
 	return string(b)
 }
 
-func RegisterUser(username_or_email string, password string, role userclient.UserRole) (*http.Response, error) {
+func RegisterUser(username_or_email string, password string, role util.UserRole) (*http.Response, error) {
 	username := username_or_email
 	email := username + "@gmail.com"
 
@@ -286,7 +286,7 @@ func SetupHostRoomAvailabilityPrice(hostUsername string, t *testing.T) (string, 
 	// Step 1: Register unique host
 	username := hostUsername
 	password := "pass"
-	RegisterUser(username, password, userclient.Host)
+	RegisterUser(username, password, util.Host)
 	jwt := LoginUser2(username, password)
 	jwtObj, err := util.GetJwtFromString(jwt)
 	require.NoError(t, err)
