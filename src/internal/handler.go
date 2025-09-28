@@ -51,7 +51,7 @@ func (h *Handler) createReservationRequest(ctx *gin.Context) {
 		return
 	}
 
-	reservation, err := h.service.CreateRequest(AuthContext{CallerID: jwt.ID, JWT: jwtString}, dto)
+	reservation, err := h.service.CreateRequest(util.TEL.Ctx(), AuthContext{CallerID: jwt.ID, JWT: jwtString}, dto)
 	if err != nil {
 		AbortError(ctx, err)
 		return
@@ -74,7 +74,7 @@ func (h *Handler) findPendingRequestsByGuest(ctx *gin.Context) {
 		return
 	}
 
-	requests, err := h.service.FindPendingRequestsByGuest(jwt.ID)
+	requests, err := h.service.FindPendingRequestsByGuest(util.TEL.Ctx(), jwt.ID)
 	if err != nil {
 		AbortError(ctx, err)
 		return
@@ -109,7 +109,7 @@ func (h *Handler) findPendingRequestsByRoom(ctx *gin.Context) {
 		return
 	}
 
-	requests, err := h.service.FindPendingRequestsByRoom(jwt.ID, uint(id))
+	requests, err := h.service.FindPendingRequestsByRoom(util.TEL.Ctx(), jwt.ID, uint(id))
 	if err != nil {
 		AbortError(ctx, err)
 		return
@@ -144,7 +144,7 @@ func (h *Handler) deleteRequestByGuest(ctx *gin.Context) {
 		return
 	}
 
-	err = h.service.DeleteRequest(jwt.ID, uint(id))
+	err = h.service.DeleteRequest(util.TEL.Ctx(), jwt.ID, uint(id))
 	if err != nil {
 		AbortError(ctx, err)
 		return
@@ -175,7 +175,7 @@ func (h *Handler) checkAvailability(ctx *gin.Context) {
 		return
 	}
 
-	available, err := h.service.AreThereReservationsOnDays(uint(roomID), from, to)
+	available, err := h.service.AreThereReservationsOnDays(util.TEL.Ctx(), uint(roomID), from, to)
 	if err != nil {
 		AbortError(ctx, err)
 		return

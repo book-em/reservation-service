@@ -1,6 +1,7 @@
 package userclient
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,7 +10,7 @@ import (
 )
 
 type UserClient interface {
-	FindById(it uint) (*UserDTO, error)
+	FindById(context context.Context, it uint) (*UserDTO, error)
 }
 
 type userClient struct {
@@ -22,7 +23,7 @@ func NewUserClient() UserClient {
 	}
 }
 
-func (c *userClient) FindById(id uint) (*UserDTO, error) {
+func (c *userClient) FindById(context context.Context, id uint) (*UserDTO, error) {
 	log.Printf("Find user %d", id)
 
 	resp, err := http.Get(fmt.Sprintf("%s/%d", c.baseURL, id))
