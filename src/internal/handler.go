@@ -22,6 +22,7 @@ func (r *Route) Route(rg *gin.RouterGroup) {
 	rg.GET("/room/:id/availability", r.handler.checkAvailability)
 
 	rg.GET("/reservations/guest/active", r.handler.getActiveGuestReservations)
+	rg.GET("/reservations/host/active", r.handler.getActiveHostReservations)
 }
 
 type Handler struct{ service Service }
@@ -231,6 +232,40 @@ func (h *Handler) getActiveGuestReservations(ctx *gin.Context) {
 	}
 
 	reservations, err := h.service.GetActiveGuestReservations(jwt.ID)
+	if err != nil {
+		AbortError(ctx, err)
+		return
+	}
+
+	result := make([]ReservationDTO, 0)
+	for _, res := range reservations {
+		result = append(result, NewReservationDTO(res))
+	}
+
+	ctx.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) getActiveHostReservations(ctx *gin.Context) {
+	log.Printf("getActiveHostReservations called")
+
+	jwt, err := util.GetJwt(ctx)
+	if err != nil {
+		AbortError(ctx, ErrUnauthenticated)
+		return
+	}
+
+	if jwt.Role != userclient.Host {
+		AbortError(ctx, ErrUnauthorized)
+		return
+	}
+
+	var dto RoomIDsDTO
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		AbortError(ctx, err)
+		return
+	}
+
+	reservations, err := h.service.GetActiveHostReservations(jwt.ID, dto.IDs)
 	if err != nil {
 		AbortError(ctx, err)
 		return
