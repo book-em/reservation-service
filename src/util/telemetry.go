@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	slogmulti "github.com/samber/slog-multi"
@@ -106,6 +107,8 @@ func (t *Telemetry) GetLoggingMiddleware() gin.HandlerFunc {
 			slog.String("path", c.Request.URL.Path),
 			slog.Int("status", c.Writer.Status()),
 			slog.String("client_ip", c.ClientIP()),
+			slog.String("user_agent", c.Request.UserAgent()),
+			slog.Time("timestamp", time.Now()),
 		)
 	}
 }
