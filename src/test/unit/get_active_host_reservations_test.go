@@ -2,6 +2,7 @@ package test
 
 import (
 	"bookem-reservation-service/internal"
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -15,9 +16,9 @@ func Test_GetActiveHostReservations_UserNotFound(t *testing.T) {
 	host := DefaultUser_Host
 	var roomIDs []uint
 
-	mockUserClient.On("FindById", host.Id).Return(nil, errors.New("User is not found"))
+	mockUserClient.On("FindById", context.Background(), host.Id).Return(nil, errors.New("User is not found"))
 
-	reservations, err := svc.GetActiveHostReservations(host.Id, roomIDs)
+	reservations, err := svc.GetActiveHostReservations(context.Background(), host.Id, roomIDs)
 
 	assert.Error(t, err)
 	assert.Nil(t, reservations)
@@ -33,9 +34,9 @@ func Test_GetActiveHostReservations_NoRoomsNoReservations(t *testing.T) {
 	host := DefaultUser_Host
 	var roomIDs []uint
 
-	mockUserClient.On("FindById", host.Id).Return(host, nil)
+	mockUserClient.On("FindById", context.Background(), host.Id).Return(host, nil)
 
-	reservations, err := svc.GetActiveHostReservations(host.Id, roomIDs)
+	reservations, err := svc.GetActiveHostReservations(context.Background(), host.Id, roomIDs)
 
 	assert.NoError(t, err)
 	assert.Nil(t, reservations)
@@ -57,11 +58,11 @@ func Test_GetActiveHostReservations_NoneRoomHasAnyReservation(t *testing.T) {
 	reservartion2.Cancelled = true
 	reservations2 := []internal.Reservation{*reservartion1}
 
-	mockUserClient.On("FindById", host.Id).Return(host, nil)
+	mockUserClient.On("FindById", context.Background(), host.Id).Return(host, nil)
 	mockRepo.On("FindReservationsByRoomID", roomIDs[0]).Return(reservations1, nil)
 	mockRepo.On("FindReservationsByRoomID", roomIDs[1]).Return(reservations2, nil)
 
-	reservartionsGot, err := svc.GetActiveHostReservations(host.Id, roomIDs)
+	reservartionsGot, err := svc.GetActiveHostReservations(context.Background(), host.Id, roomIDs)
 
 	assert.NoError(t, err)
 	assert.Nil(t, reservartionsGot)
@@ -87,11 +88,11 @@ func Test_GetActiveHostReservations_Success(t *testing.T) {
 	reservartion2.DateTo = time.Now().Add(24 * time.Hour)
 	reservations2 := []internal.Reservation{reservartion2}
 
-	mockUserClient.On("FindById", host.Id).Return(host, nil)
+	mockUserClient.On("FindById", context.Background(), host.Id).Return(host, nil)
 	mockRepo.On("FindReservationsByRoomID", roomIDs[0]).Return(reservations1, nil)
 	mockRepo.On("FindReservationsByRoomID", roomIDs[1]).Return(reservations2, nil)
 
-	reservartionsGot, err := svc.GetActiveHostReservations(host.Id, roomIDs)
+	reservartionsGot, err := svc.GetActiveHostReservations(context.Background(), host.Id, roomIDs)
 
 	assert.NoError(t, err)
 	assert.Equal(t, reservations1, reservartionsGot)
