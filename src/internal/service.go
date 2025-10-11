@@ -41,11 +41,11 @@ type Service interface {
 
 	// GetActiveGuestReservations checks whether a guest has any active reservations
 	// now or in the future.
-	GetActiveGuestReservations(guestID uint) ([]Reservation, error)
+	GetActiveGuestReservations(context context.Context, guestID uint) ([]Reservation, error)
 
 	// GetActiveHostReservations checks whether a host has any active reservations
 	// now or in the future.
-	GetActiveHostReservations(hostID uint, roomIDs []uint) ([]Reservation, error)
+	GetActiveHostReservations(context context.Context, hostID uint, roomIDs []uint) ([]Reservation, error)
 
 	// ExtractActiveReservations filters the provided list of reservations
 	// and returns only the active ones.
@@ -320,10 +320,10 @@ func (s *service) AreThereReservationsOnDays(context context.Context, roomID uin
 	return false, nil
 }
 
-func (s *service) GetActiveGuestReservations(guestID uint) ([]Reservation, error) {
+func (s *service) GetActiveGuestReservations(context context.Context, guestID uint) ([]Reservation, error) {
 	log.Print("GetActiveGuestReservations [1] User must be guest")
 
-	_, err := s.userClient.FindById(guestID)
+	_, err := s.userClient.FindById(context, guestID)
 	if err != nil {
 		return nil, ErrNotFound("user", guestID)
 	}
@@ -342,10 +342,10 @@ func (s *service) GetActiveGuestReservations(guestID uint) ([]Reservation, error
 	return activeReservations, nil
 }
 
-func (s *service) GetActiveHostReservations(hostID uint, roomIDs []uint) ([]Reservation, error) {
+func (s *service) GetActiveHostReservations(context context.Context, hostID uint, roomIDs []uint) ([]Reservation, error) {
 	log.Print("GetActiveHostReservations [1] User must be host")
 
-	_, err := s.userClient.FindById(hostID)
+	_, err := s.userClient.FindById(context, hostID)
 	if err != nil {
 		return nil, ErrNotFound("user", hostID)
 	}
