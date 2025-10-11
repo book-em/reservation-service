@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bookem-reservation-service/util"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -218,21 +219,25 @@ func (h *Handler) checkAvailability(ctx *gin.Context) {
 }
 
 func (h *Handler) getActiveGuestReservations(ctx *gin.Context) {
-	log.Printf("getActiveGuestReservations called")
+	util.TEL.Push(ctx, "get-active-reservations-for-guest")
+	defer util.TEL.Pop()
 
 	jwt, err := util.GetJwt(ctx)
 	if err != nil {
+		util.TEL.Error("failed fetching JWT", err)
 		AbortError(ctx, ErrUnauthenticated)
 		return
 	}
 
-	if jwt.Role != userclient.Guest {
+	if jwt.Role != util.Guest {
+		util.TEL.Error("user is not host", nil, "role", jwt.Role)
 		AbortError(ctx, ErrUnauthorized)
 		return
 	}
 
-	reservations, err := h.service.GetActiveGuestReservations(jwt.ID)
+	reservations, err := h.service.GetActiveGuestReservations(ctx, jwt.ID)
 	if err != nil {
+		util.TEL.Error("could not get active guest reservations", err)
 		AbortError(ctx, err)
 		return
 	}
@@ -250,11 +255,13 @@ func (h *Handler) getActiveHostReservations(ctx *gin.Context) {
 
 	jwt, err := util.GetJwt(ctx)
 	if err != nil {
+		util.TEL.Error("failed fetching JWT", err)
 		AbortError(ctx, ErrUnauthenticated)
 		return
 	}
 
-	if jwt.Role != userclient.Host {
+	if jwt.Role != util.Host {
+		util.TEL.Error("user is not host", nil, "role", jwt.Role)
 		AbortError(ctx, ErrUnauthorized)
 		return
 	}
@@ -265,8 +272,9 @@ func (h *Handler) getActiveHostReservations(ctx *gin.Context) {
 		return
 	}
 
-	reservations, err := h.service.GetActiveHostReservations(jwt.ID, dto.IDs)
+	reservations, err := h.service.GetActiveHostReservations(ctx, jwt.ID, dto.IDs)
 	if err != nil {
+		util.TEL.Error("could not get active host reservations", err)
 		AbortError(ctx, err)
 		return
 	}
