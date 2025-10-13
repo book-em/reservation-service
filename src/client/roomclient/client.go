@@ -15,6 +15,7 @@ import (
 
 type RoomClient interface {
 	FindById(context context.Context, it uint) (*RoomDTO, error)
+	FindByHostId(context context.Context, id uint) ([]RoomDTO, error)
 
 	FindCurrentAvailabilityListOfRoom(context context.Context, roomId uint) (*RoomAvailabilityListDTO, error)
 	FindCurrentPricelistOfRoom(context context.Context, roomId uint) (*RoomPriceListDTO, error)
@@ -184,4 +185,41 @@ func (c *roomClient) QueryForReservation(context context.Context, jwt string, dt
 	}
 
 	return &obj, nil
+}
+
+func (c *roomClient) FindByHostId(context context.Context, id uint) ([]RoomDTO, error) {
+	util.TEL.Info("find host rooms", "host_id", id)
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/host/%d", c.baseURL, id), nil)
+	if err != nil {
+		util.TEL.Error("could not create request", err)
+		return nil, err
+	}
+	otel.GetTextMapPropagator().Inject(context, propagation.HeaderCarrier(req.Header))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		util.TEL.Error("could not send request", err)
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		util.TEL.Error("rooms not found", nil, "host_id", id, "http", resp.StatusCode)
+		return nil, fmt.Errorf("rooms of host %d not found", id)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		util.TEL.Error("could not parse bytes from response", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var obj []RoomDTO
+	if err := json.Unmarshal(bodyBytes, &obj); err != nil {
+		util.TEL.Error("could not unmarshall JSON", err)
+		return nil, err
+	}
+
+	return obj, nil
 }

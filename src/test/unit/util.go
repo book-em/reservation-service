@@ -142,6 +142,12 @@ func (r *MockRoomClient) QueryForReservation(context context.Context, jwt string
 	return resp, args.Error(1)
 }
 
+func (r *MockRoomClient) FindByHostId(context context.Context, id uint) ([]roomclient.RoomDTO, error) {
+	args := r.Called(context, id)
+	room, _ := args.Get(0).([]roomclient.RoomDTO)
+	return room, args.Error(1)
+}
+
 // ----------------------------------------------- Mock data
 
 var DefaultReservation = &internal.Reservation{
