@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bookem-reservation-service/util"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -251,7 +250,8 @@ func (h *Handler) getActiveGuestReservations(ctx *gin.Context) {
 }
 
 func (h *Handler) getActiveHostReservations(ctx *gin.Context) {
-	log.Printf("getActiveHostReservations called")
+	util.TEL.Push(ctx.Request.Context(), "get-active-host-reservations-api")
+	defer util.TEL.Pop()
 
 	jwt, err := util.GetJwt(ctx)
 	if err != nil {
@@ -266,13 +266,7 @@ func (h *Handler) getActiveHostReservations(ctx *gin.Context) {
 		return
 	}
 
-	var dto RoomIDsDTO
-	if err := ctx.ShouldBindJSON(&dto); err != nil {
-		AbortError(ctx, err)
-		return
-	}
-
-	reservations, err := h.service.GetActiveHostReservations(ctx, jwt.ID, dto.IDs)
+	reservations, err := h.service.GetActiveHostReservations(ctx, jwt.ID)
 	if err != nil {
 		util.TEL.Error("could not get active host reservations", err)
 		AbortError(ctx, err)
