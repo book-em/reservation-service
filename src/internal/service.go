@@ -51,7 +51,13 @@ type Service interface {
 	// and returns only the active ones.
 	ExtractActiveReservations(reservations []Reservation) []Reservation
 
+	// RejectReservationRequest changes the status of a pending reservation request
+	// to rejected.
 	RejectReservationRequest(context context.Context, hostID, requestID uint) error
+
+	// ApproveReservationRequest approves a reservation request for a room
+	// and creates a corresponding reservation record.
+	ApproveReservationRequest(context context.Context, hostID, requestID uint) error
 }
 
 type service struct {
@@ -163,7 +169,7 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 		}
 	}
 
-	util.TEL.Debug("xheck if this room has a reservation for this date range", nil)
+	util.TEL.Debug("check if this room has a reservation for this date range", nil)
 
 	has, err := s.AreThereReservationsOnDays(util.TEL.Ctx(), dto.RoomID, dto.DateFrom, dto.DateTo)
 	if err != nil {
@@ -197,7 +203,7 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 
 	if room.AutoApprove {
 		util.TEL.Info("auto-approval is enabled, accepting reservation request automatically", "room_id", room.ID)
-		if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room, jwt); err != nil {
+		if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room); err != nil {
 			util.TEL.Error("auto-approval process failed", err)
 			return nil, err
 		}
@@ -207,7 +213,7 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 	return req, nil
 }
 
-func (s *service) acceptReservationRequest(ctx context.Context, req *ReservationRequest, room *roomclient.RoomDTO, jwt string) error {
+func (s *service) acceptReservationRequest(ctx context.Context, req *ReservationRequest, room *roomclient.RoomDTO) error {
 	util.TEL.Info("accept reservation request", "room_id", req.RoomID, "guest_id", req.GuestID)
 
 	util.TEL.Debug("find current availability and price lists")
@@ -223,26 +229,6 @@ func (s *service) acceptReservationRequest(ctx context.Context, req *Reservation
 		return ErrNotFound("room price list", room.ID)
 	}
 
-	util.TEL.Debug("query room for reservation data")
-	queryDTO := roomclient.RoomReservationQueryDTO{
-		RoomID:     room.ID,
-		DateFrom:   req.DateFrom,
-		DateTo:     req.DateTo,
-		GuestCount: req.GuestCount,
-	}
-	queryResponse, err := s.roomClient.QueryForReservation(util.TEL.Ctx(), jwt, queryDTO)
-	if err != nil {
-		util.TEL.Error("could not query room for reservation", err)
-		return ErrBadRequest
-	}
-	if !queryResponse.Available {
-		util.TEL.Error("room is not available for acceptance", nil)
-		return ErrBadRequestCustom("room is not available for acceptance")
-	}
-
-	util.TEL.Debug("calculate total cost")
-	cost := queryResponse.TotalCost
-
 	util.TEL.Debug("create reservation")
 	res := &Reservation{
 		RoomID:             req.RoomID,
@@ -253,7 +239,7 @@ func (s *service) acceptReservationRequest(ctx context.Context, req *Reservation
 		DateTo:             req.DateTo,
 		GuestCount:         req.GuestCount,
 		Cancelled:          false,
-		Cost:               cost,
+		Cost:               req.Cost,
 	}
 	if err := s.repo.CreateReservation(res); err != nil {
 		util.TEL.Error("could not create reservation", err)
@@ -479,16 +465,47 @@ func (s *service) RejectReservationRequest(ctx context.Context, hostID, requestI
 		util.TEL.Error("room not found", err, "id", req.RoomID)
 		return err
 	}
+
 	if room.HostID != hostID {
 		util.TEL.Error("bad host for room", nil, "host_id", room.HostID, "room_id", room.ID)
 		return ErrUnauthorized
 	}
 
 	if err := s.repo.SetRequestStatus(requestID, Rejected); err != nil {
-		util.TEL.Error("could not change status to rejectd", err, "request_id", requestID)
+		util.TEL.Error("could not change status to rejected", err, "request_id", requestID)
 		return err
 	}
 
 	util.TEL.Info("reservation request rejected", "request_id", requestID)
+	return nil
+}
+
+func (s *service) ApproveReservationRequest(ctx context.Context, hostID, requestID uint) error {
+	util.TEL.Push(ctx, "approve-reservation-request-service")
+	defer util.TEL.Pop()
+
+	req, err := s.repo.FindRequestByID(requestID)
+	if err != nil {
+		util.TEL.Error("could not find reservation requst", err, "request_id", requestID)
+		return err
+	}
+
+	room, err := s.roomClient.FindById(util.TEL.Ctx(), req.RoomID)
+	if err != nil {
+		util.TEL.Error("room not found", err, "id", req.RoomID)
+		return err
+	}
+
+	if room.HostID != hostID {
+		util.TEL.Error("bad host for room", nil, "host_id", room.HostID, "room_id", room.ID)
+		return ErrUnauthorized
+	}
+
+	if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room); err != nil {
+		util.TEL.Error("could not change status to accepted", err, "request_id", requestID)
+		return err
+	}
+
+	util.TEL.Info("reservation request approved successfully", "request_id", requestID)
 	return nil
 }
