@@ -187,11 +187,91 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 		RoomPriceID:        pricelist.ID,
 		Cost:               cost,
 	}
+
 	if err := s.repo.CreateRequest(req); err != nil {
 		util.TEL.Error("failed creating a reservation request", err)
 		return nil, err
 	}
+
+	if room.AutoApprove {
+		util.TEL.Info("auto-approval is enabled, accepting reservation request automatically", "room_id", room.ID)
+		if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room, jwt); err != nil {
+			util.TEL.Error("auto-approval process failed", err)
+			return nil, err
+		}
+	}
+
+	util.TEL.Info("reservation request created successfully", "request_id", req.ID)
 	return req, nil
+}
+
+func (s *service) acceptReservationRequest(ctx context.Context, req *ReservationRequest, room *roomclient.RoomDTO, jwt string) error {
+	util.TEL.Info("accept reservation request", "room_id", req.RoomID, "guest_id", req.GuestID)
+
+	util.TEL.Debug("find current availability and price lists")
+	availList, err := s.roomClient.FindCurrentAvailabilityListOfRoom(util.TEL.Ctx(), room.ID)
+	if err != nil {
+		util.TEL.Error("room availability list not found", err, "room_id", room.ID)
+		return ErrNotFound("room availability list", room.ID)
+	}
+
+	pricelist, err := s.roomClient.FindCurrentPricelistOfRoom(util.TEL.Ctx(), room.ID)
+	if err != nil {
+		util.TEL.Error("room price list not found", err, "room_id", room.ID)
+		return ErrNotFound("room price list", room.ID)
+	}
+
+	util.TEL.Debug("query room for reservation data")
+	queryDTO := roomclient.RoomReservationQueryDTO{
+		RoomID:     room.ID,
+		DateFrom:   req.DateFrom,
+		DateTo:     req.DateTo,
+		GuestCount: req.GuestCount,
+	}
+	queryResponse, err := s.roomClient.QueryForReservation(util.TEL.Ctx(), jwt, queryDTO)
+	if err != nil {
+		util.TEL.Error("could not query room for reservation", err)
+		return ErrBadRequest
+	}
+	if !queryResponse.Available {
+		util.TEL.Error("room is not available for acceptance", nil)
+		return ErrBadRequestCustom("room is not available for acceptance")
+	}
+
+	util.TEL.Debug("calculate total cost")
+	cost := queryResponse.TotalCost
+
+	util.TEL.Debug("create reservation")
+	res := &Reservation{
+		RoomID:             req.RoomID,
+		RoomAvailabilityID: availList.ID,
+		RoomPriceID:        pricelist.ID,
+		GuestID:            req.GuestID,
+		DateFrom:           req.DateFrom,
+		DateTo:             req.DateTo,
+		GuestCount:         req.GuestCount,
+		Cancelled:          false,
+		Cost:               cost,
+	}
+	if err := s.repo.CreateReservation(res); err != nil {
+		util.TEL.Error("could not create reservation", err)
+		return err
+	}
+
+	util.TEL.Debug("reject overlapping pending requests")
+	if err := s.repo.RejectPendingRequestsInRange(req.RoomID, req.DateFrom, req.DateTo); err != nil {
+		util.TEL.Warn("could not reject overlapping requests", "room_id", req.RoomID)
+	}
+
+	util.TEL.Debug("update current request to accepted")
+	if err := s.repo.SetRequestStatus(req.ID, Accepted); err != nil {
+		util.TEL.Error("failed updating request status to accepted", err)
+		return err
+	}
+	req.Status = Accepted
+
+	util.TEL.Info("reservation request accepted successfully", "request_id", req.ID)
+	return nil
 }
 
 func (s *service) FindPendingRequestsByGuest(context context.Context, callerID uint) ([]ReservationRequest, error) {
