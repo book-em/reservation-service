@@ -50,6 +50,8 @@ type Service interface {
 	// ExtractActiveReservations filters the provided list of reservations
 	// and returns only the active ones.
 	ExtractActiveReservations(reservations []Reservation) []Reservation
+
+	RejectReservationRequest(context context.Context, hostID, requestID uint) error
 }
 
 type service struct {
@@ -460,4 +462,33 @@ func (s *service) ExtractActiveReservations(reservations []Reservation) []Reserv
 		}
 	}
 	return activeReservations
+}
+
+func (s *service) RejectReservationRequest(ctx context.Context, hostID, requestID uint) error {
+	util.TEL.Push(ctx, "reject-reservation-request-service")
+	defer util.TEL.Pop()
+
+	req, err := s.repo.FindRequestByID(requestID)
+	if err != nil {
+		util.TEL.Error("could not find reservation requst", err, "request_id", requestID)
+		return err
+	}
+
+	room, err := s.roomClient.FindById(util.TEL.Ctx(), req.RoomID)
+	if err != nil {
+		util.TEL.Error("room not found", err, "id", req.RoomID)
+		return err
+	}
+	if room.HostID != hostID {
+		util.TEL.Error("bad host for room", nil, "host_id", room.HostID, "room_id", room.ID)
+		return ErrUnauthorized
+	}
+
+	if err := s.repo.SetRequestStatus(requestID, Rejected); err != nil {
+		util.TEL.Error("could not change status to rejectd", err, "request_id", requestID)
+		return err
+	}
+
+	util.TEL.Info("reservation request rejected", "request_id", requestID)
+	return nil
 }

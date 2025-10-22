@@ -15,6 +15,7 @@ type Repository interface {
 	RejectPendingRequestsInRange(roomID uint, from, to time.Time) error
 	FindPendingRequestsByRoomID(roomID uint) ([]ReservationRequest, error)
 	FindPendingRequestsByGuestID(guestID uint) ([]ReservationRequest, error)
+	FindRequestByID(id uint) (*ReservationRequest, error)
 
 	// Reservation methods
 	CreateReservation(res *Reservation) error
@@ -106,4 +107,13 @@ func (r *repository) FindReservationsByRoomID(roomID uint) ([]Reservation, error
 	var reservations []Reservation
 	err := r.db.Where("room_id = ?", roomID).Find(&reservations).Error
 	return reservations, err
+}
+
+func (r *repository) FindRequestByID(id uint) (*ReservationRequest, error) {
+	var req ReservationRequest
+	err := r.db.First(&req, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &req, nil
 }
