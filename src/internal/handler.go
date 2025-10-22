@@ -23,6 +23,8 @@ func (r *Route) Route(rg *gin.RouterGroup) {
 
 	rg.GET("/reservations/guest/active", r.handler.getActiveGuestReservations)
 	rg.GET("/reservations/host/active", r.handler.getActiveHostReservations)
+
+	rg.PUT("/req/:id/reject", r.handler.rejectReservationRequest)
 }
 
 type Handler struct{ service Service }
@@ -279,4 +281,38 @@ func (h *Handler) getActiveHostReservations(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, result)
+}
+
+func (h *Handler) rejectReservationRequest(ctx *gin.Context) {
+	util.TEL.Push(ctx, "reject-reservation-request")
+	defer util.TEL.Pop()
+
+	jwt, err := util.GetJwt(ctx)
+	if err != nil {
+		util.TEL.Error("failed fetching JWT", err)
+		AbortError(ctx, ErrUnauthenticated)
+		return
+	}
+
+	if jwt.Role != util.Host {
+		util.TEL.Error("user is not host", nil, "role", jwt.Role)
+		AbortError(ctx, ErrUnauthorized)
+		return
+	}
+
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		util.TEL.Error("could not parse request param id into a number", err, "id", ctx.Param("id"))
+		AbortError(ctx, ErrBadRequest)
+		return
+	}
+
+	err = h.service.RejectReservationRequest(util.TEL.Ctx(), jwt.ID, uint(id))
+	if err != nil {
+		util.TEL.Error("could not reject reservation request", err)
+		AbortError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "reservation request rejected successfully"})
 }
