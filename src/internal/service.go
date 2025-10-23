@@ -60,6 +60,8 @@ type Service interface {
 	ApproveReservationRequest(context context.Context, hostID, requestID uint) error
 
 	CancelReservation(ctx context.Context, callerID uint, reservationID uint) error
+
+	GetGuestCancellationCount(context context.Context, guestID uint) (uint, error)
 }
 
 type service struct {
@@ -560,4 +562,20 @@ func (s *service) CancelReservation(ctx context.Context, callerID uint, reservat
 
 	util.TEL.Info("reservation cancelled successfully", "reservation_id", reservationID)
 	return nil
+}
+
+func (s *service) GetGuestCancellationCount(ctx context.Context, guestID uint) (uint, error) {
+	util.TEL.Push(ctx, "get-guest-cancellation-count")
+	defer util.TEL.Pop()
+
+	util.TEL.Info("count guest cancellations for user", "guest_id", guestID)
+
+	count, err := s.repo.CountGuestCancellations(guestID)
+	if err != nil {
+		util.TEL.Error("could not count guest cancellations", err, "guest_id", guestID)
+		return 0, err
+	}
+
+	util.TEL.Debug("guest cancellation count calculated", "guest_id", guestID, "count", count)
+	return uint(count), nil
 }
