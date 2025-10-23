@@ -139,13 +139,20 @@ func (h *Handler) findPendingRequestsByRoom(ctx *gin.Context) {
 		return
 	}
 
-	util.TEL.Debug("building response")
+	util.TEL.Debug("building response with guest cancellation counts", "requests", len(requests))
 
-	result := make([]ReservationRequestDTO, 0)
+	result := make([]ReservationRequestDTO, 0, len(requests))
 	for _, req := range requests {
-		result = append(result, NewReservationRequestDTO(req))
+		cancelCount, cntErr := h.service.GetGuestCancellationCount(util.TEL.Ctx(), req.GuestID)
+		if cntErr != nil {
+			util.TEL.Warn("could not fetch guest cancellation count; using 0", "guest_id", req.GuestID)
+			cancelCount = 0
+		}
+
+		result = append(result, NewReservationRequestDTOWithCancellations(req, cancelCount))
 	}
 
+	util.TEL.Info("returning pending requests with guest cancellation counts", "count", len(result))
 	ctx.JSON(http.StatusOK, result)
 }
 
