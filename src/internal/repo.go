@@ -25,6 +25,7 @@ type Repository interface {
 	FindReservationsByGuestID(guestID uint) ([]Reservation, error)
 	CountGuestCancellations(guestID uint) (int64, error)
 	FindReservationsByRoomID(roomID uint) ([]Reservation, error)
+	FindReservationById(id uint) (*Reservation, error)
 }
 
 type repository struct {
@@ -116,4 +117,13 @@ func (r *repository) FindRequestByID(id uint) (*ReservationRequest, error) {
 		return nil, err
 	}
 	return &req, nil
+}
+
+func (r *repository) FindReservationById(id uint) (*Reservation, error) {
+	var reservation Reservation
+	err := r.db.Where("id = ?", id).First(&reservation).Error
+	if err != nil {
+		return nil, err
+	}
+	return &reservation, nil
 }
