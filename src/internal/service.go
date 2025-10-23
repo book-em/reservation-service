@@ -58,6 +58,8 @@ type Service interface {
 	// ApproveReservationRequest approves a reservation request for a room
 	// and creates a corresponding reservation record.
 	ApproveReservationRequest(context context.Context, hostID, requestID uint) error
+
+	CancelReservation(ctx context.Context, callerID uint, reservationID uint) error
 }
 
 type service struct {
@@ -507,5 +509,53 @@ func (s *service) ApproveReservationRequest(ctx context.Context, hostID, request
 	}
 
 	util.TEL.Info("reservation request approved successfully", "request_id", requestID)
+	return nil
+}
+
+func (s *service) CancelReservation(ctx context.Context, callerID uint, reservationID uint) error {
+	util.TEL.Info("user wants to cancel reservation", "caller_id", callerID, "reservation_id", reservationID)
+
+	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
+	if err != nil {
+		util.TEL.Error("user not found", err, "user_id", callerID)
+		return ErrUnauthenticated
+	}
+
+	if user.Role != string(util.Guest) {
+		util.TEL.Error("user is not a guest", nil, "role", user.Role)
+		return ErrUnauthorized
+	}
+
+	reservation, err := s.repo.FindReservationById(reservationID)
+	if err != nil {
+		util.TEL.Error("reservation not found", err, "reservation_id", reservationID)
+		return ErrNotFound("reservation", reservationID)
+	}
+
+	if reservation.GuestID != callerID {
+		util.TEL.Error("reservation does not belong to this guest", nil, "reservation_guest_id", reservation.GuestID, "caller_id", callerID)
+		return ErrUnauthorized
+	}
+
+	if reservation.Cancelled {
+		util.TEL.Error("reservation already cancelled", nil, "reservation_id", reservationID)
+		return ErrBadRequestCustom("reservation already cancelled")
+	}
+
+	if !time.Now().Before(reservation.DateFrom) {
+		util.TEL.Error("cannot cancel reservation that already started", nil, "date_from", reservation.DateFrom)
+		return ErrBadRequestCustom("cannot cancel reservation that already started")
+	}
+
+	util.TEL.Push(ctx, "cancel-reservation-in-db")
+	defer util.TEL.Pop()
+
+	err = s.repo.CancelReservation(reservationID)
+	if err != nil {
+		util.TEL.Error("could not cancel reservation in database", err, "reservation_id", reservationID)
+		return err
+	}
+
+	util.TEL.Info("reservation cancelled successfully", "reservation_id", reservationID)
 	return nil
 }

@@ -26,6 +26,7 @@ func (r *Route) Route(rg *gin.RouterGroup) {
 
 	rg.PUT("/req/:id/reject", r.handler.rejectReservationRequest)
 	rg.PUT("/req/:id/approve", r.handler.approveReservationRequest)
+	rg.DELETE("/reservations/:id/cancel", r.handler.cancelReservation)
 }
 
 type Handler struct{ service Service }
@@ -350,4 +351,38 @@ func (h *Handler) approveReservationRequest(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "reservation request approved successfully"})
+}
+
+func (h *Handler) cancelReservation(ctx *gin.Context) {
+	util.TEL.Push(ctx.Request.Context(), "cancel-reservation-api")
+	defer util.TEL.Pop()
+
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		util.TEL.Error("could not parse reservation id", err, "id", ctx.Param("id"))
+		AbortError(ctx, ErrBadRequest)
+		return
+	}
+
+	jwt, err := util.GetJwt(ctx)
+	if err != nil {
+		util.TEL.Error("could not get JWT", err)
+		AbortError(ctx, ErrUnauthenticated)
+		return
+	}
+
+	if jwt.Role != util.Guest {
+		util.TEL.Error("user is not guest", nil, "role", jwt.Role)
+		AbortError(ctx, ErrUnauthorized)
+		return
+	}
+
+	err = h.service.CancelReservation(util.TEL.Ctx(), jwt.ID, uint(id))
+	if err != nil {
+		util.TEL.Error("failed to cancel reservation", err)
+		AbortError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
 }
