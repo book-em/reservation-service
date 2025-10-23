@@ -24,6 +24,7 @@ type CreateRoomDTO struct {
 	MaxGuests     uint     `json:"maxGuests"`
 	PhotosPayload []string `json:"photosPayload"`
 	Commodities   []string `json:"commodities"`
+	AutoApprove   bool     `json:"autoApprove"`
 }
 
 // ---------------------------------------------------------------
