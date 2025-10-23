@@ -301,6 +301,7 @@ func SetupHostRoomAvailabilityPrice(hostUsername string, t *testing.T) (string, 
 		MaxGuests:     4,
 		PhotosPayload: []string{SMALL_IMG},
 		Commodities:   []string{"WiFi", "AC"},
+		AutoApprove:   false,
 	}
 	roomResp, err := CreateRoom(jwt, roomDTO)
 	require.NoError(t, err)
@@ -321,6 +322,12 @@ func SetupHostRoomAvailabilityPrice(hostUsername string, t *testing.T) (string, 
 				ExistingID: 0,
 				DateFrom:   time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 				DateTo:     time.Date(2025, 9, 20, 0, 0, 0, 0, time.UTC),
+				Available:  true,
+			},
+			{
+				ExistingID: 0,
+				DateFrom:   time.Date(2025, 9, 22, 0, 0, 0, 0, time.UTC),
+				DateTo:     time.Date(2025, 9, 30, 0, 0, 0, 0, time.UTC),
 				Available:  true,
 			},
 		},
@@ -346,6 +353,12 @@ func SetupHostRoomAvailabilityPrice(hostUsername string, t *testing.T) (string, 
 				DateFrom:   time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
 				DateTo:     time.Date(2025, 9, 20, 0, 0, 0, 0, time.UTC),
 				Price:      120,
+			},
+			{
+				ExistingID: 0,
+				DateFrom:   time.Date(2025, 9, 22, 0, 0, 0, 0, time.UTC),
+				DateTo:     time.Date(2025, 9, 30, 0, 0, 0, 0, time.UTC),
+				Price:      200,
 			},
 		},
 	}
