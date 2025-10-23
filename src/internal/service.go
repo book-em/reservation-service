@@ -380,9 +380,11 @@ func (s *service) AreThereReservationsOnDays(context context.Context, roomID uin
 			util.TEL.Error("could not find reservations for room on a single day", err, "room_id", roomID, "day", d)
 			return false, err
 		}
-		if len(reservations) > 0 {
-			util.TEL.Debug("reservation for room found on day", "room_id", roomID, "day", d)
-			return true, nil
+		for _, res := range reservations {
+			if !res.Cancelled {
+				util.TEL.Debug("active reservation found", "room_id", roomID, "day", d)
+				return true, nil
+			}
 		}
 	}
 
