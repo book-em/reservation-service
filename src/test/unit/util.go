@@ -100,6 +100,14 @@ func (r *MockReservationRepo) FindReservationsByRoomID(roomID uint) ([]internal.
 	return args.Get(0).([]internal.Reservation), args.Error(1)
 }
 
+func (m *MockReservationRepo) FindRequestByID(id uint) (*internal.ReservationRequest, error) {
+	args := m.Called(id)
+	if req, ok := args.Get(0).(*internal.ReservationRequest); ok {
+		return req, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 // ----------------------------------------------- Mock user client
 
 type MockUserClient struct {
