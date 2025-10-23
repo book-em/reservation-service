@@ -278,6 +278,18 @@ func ResponseToReservationRequests(resp *http.Response) []internal.ReservationRe
 	return obj
 }
 
+func GetActiveGuestReservations(jwt string) (*http.Response, error) {
+	url := URL_reservation + "reservations/guest/active"
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Authorization", "Bearer "+jwt)
+	return http.DefaultClient.Do(req)
+}
+
 const (
 	SMALL_IMG = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q=="
 )
@@ -330,6 +342,12 @@ func SetupHostRoomAvailabilityPrice(hostUsername string, t *testing.T) (string, 
 				DateTo:     time.Date(2025, 9, 30, 0, 0, 0, 0, time.UTC),
 				Available:  true,
 			},
+			{
+				ExistingID: 0,
+				DateFrom:   time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC),
+				DateTo:     time.Date(2025, 12, 10, 0, 0, 0, 0, time.UTC),
+				Available:  true,
+			},
 		},
 	}
 	availResp, err := CreateRoomAvailability(jwt, availabilityDTO)
@@ -358,6 +376,12 @@ func SetupHostRoomAvailabilityPrice(hostUsername string, t *testing.T) (string, 
 				ExistingID: 0,
 				DateFrom:   time.Date(2025, 9, 22, 0, 0, 0, 0, time.UTC),
 				DateTo:     time.Date(2025, 9, 30, 0, 0, 0, 0, time.UTC),
+				Price:      200,
+			},
+			{
+				ExistingID: 0,
+				DateFrom:   time.Date(2025, 12, 1, 0, 0, 0, 0, time.UTC),
+				DateTo:     time.Date(2025, 12, 10, 0, 0, 0, 0, time.UTC),
 				Price:      200,
 			},
 		},
