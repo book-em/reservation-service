@@ -12,7 +12,7 @@ import (
 )
 
 func Test_GetActiveHostReservations_FindRoomsError(t *testing.T) {
-	svc, mockRepo, _, mockRoomClient := CreateTestRoomService()
+	svc, mockRepo, _, mockRoomClient, _ := CreateTestRoomService()
 
 	host := DefaultUser_Host
 
@@ -29,7 +29,7 @@ func Test_GetActiveHostReservations_FindRoomsError(t *testing.T) {
 }
 
 func Test_GetActiveHostReservations_NoRoomsSuccess(t *testing.T) {
-	svc, mockRepo, _, mockRoomClient := CreateTestRoomService()
+	svc, mockRepo, _, mockRoomClient, _ := CreateTestRoomService()
 
 	host := DefaultUser_Host
 
@@ -46,7 +46,7 @@ func Test_GetActiveHostReservations_NoRoomsSuccess(t *testing.T) {
 }
 
 func Test_GetActiveHostReservations_NoneRoomHasAnyReservation(t *testing.T) {
-	svc, mockRepo, _, mockRoomClient := CreateTestRoomService()
+	svc, mockRepo, _, mockRoomClient, _ := CreateTestRoomService()
 
 	host := DefaultUser_Host
 	room1 := *DefaultRoom
@@ -78,7 +78,7 @@ func Test_GetActiveHostReservations_NoneRoomHasAnyReservation(t *testing.T) {
 }
 
 func Test_GetActiveHostReservations_ReservationsErr(t *testing.T) {
-	svc, mockRepo, _, mockRoomClient := CreateTestRoomService()
+	svc, mockRepo, _, mockRoomClient, _ := CreateTestRoomService()
 
 	host := DefaultUser_Host
 	room1 := *DefaultRoom
@@ -102,7 +102,7 @@ func Test_GetActiveHostReservations_ReservationsErr(t *testing.T) {
 // This test automatically covers enough of `ExtractActiveReservations`,
 // as its logic is exceptionally simple.
 func Test_GetActiveHostReservations_Success(t *testing.T) {
-	svc, mockRepo, _, mockRoomClient := CreateTestRoomService()
+	svc, mockRepo, _, mockRoomClient, _ := CreateTestRoomService()
 
 	host := DefaultUser_Host
 	room1 := *DefaultRoom

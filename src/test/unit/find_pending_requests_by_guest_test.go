@@ -10,7 +10,7 @@ import (
 )
 
 func Test_FindPendingRequestsByGuest_Success(t *testing.T) {
-	svc, repo, userClient, _ := CreateTestRoomService()
+	svc, repo, userClient, _, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 
@@ -28,7 +28,7 @@ func Test_FindPendingRequestsByGuest_Success(t *testing.T) {
 }
 
 func Test_FindPendingRequestsByGuest_UserNotFound(t *testing.T) {
-	svc, _, userClient, _ := CreateTestRoomService()
+	svc, _, userClient, _, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(nil, errors.New("not found"))
 
@@ -39,7 +39,7 @@ func Test_FindPendingRequestsByGuest_UserNotFound(t *testing.T) {
 }
 
 func Test_FindPendingRequestsByGuest_UnauthorizedRole(t *testing.T) {
-	svc, _, userClient, _ := CreateTestRoomService()
+	svc, _, userClient, _, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Host, nil)
 

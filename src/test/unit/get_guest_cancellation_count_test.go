@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetGuestCancellationCount_Success(t *testing.T) {
-	svc, mockRepo, _, _ := CreateTestRoomService()
+	svc, mockRepo, _, _, _ := CreateTestRoomService()
 
 	guestID := uint(1)
 
@@ -23,7 +23,7 @@ func TestGetGuestCancellationCount_Success(t *testing.T) {
 }
 
 func TestGetGuestCancellationCount_DBError(t *testing.T) {
-	svc, mockRepo, _, _ := CreateTestRoomService()
+	svc, mockRepo, _, _, _ := CreateTestRoomService()
 
 	guestID := uint(2)
 
@@ -37,7 +37,7 @@ func TestGetGuestCancellationCount_DBError(t *testing.T) {
 }
 
 func TestGetGuestCancellationCount_NoCancellations(t *testing.T) {
-	svc, mockRepo, _, _ := CreateTestRoomService()
+	svc, mockRepo, _, _, _ := CreateTestRoomService()
 
 	guestID := uint(3)
 

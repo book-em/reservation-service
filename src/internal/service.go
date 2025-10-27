@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bookem-reservation-service/client/notificationclient"
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/util"
@@ -65,16 +66,19 @@ type Service interface {
 }
 
 type service struct {
-	repo       Repository
-	userClient userclient.UserClient
-	roomClient roomclient.RoomClient
+	repo               Repository
+	userClient         userclient.UserClient
+	roomClient         roomclient.RoomClient
+	notificationClient notificationclient.NotificationClient
 }
 
 func NewService(
 	roomRepo Repository,
 	userClient userclient.UserClient,
-	roomClient roomclient.RoomClient) Service {
-	return &service{roomRepo, userClient, roomClient}
+	roomClient roomclient.RoomClient,
+	notificationClient notificationclient.NotificationClient,
+) Service {
+	return &service{roomRepo, userClient, roomClient, notificationClient}
 }
 
 func (s *service) CreateRequest(context context.Context, authctx AuthContext, dto CreateReservationRequestDTO) (*ReservationRequest, error) {
@@ -214,6 +218,22 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 	}
 
 	util.TEL.Info("reservation request created successfully", "request_id", req.ID)
+
+	util.TEL.Push(context, "create-notification")
+	defer util.TEL.Pop()
+
+	createNotifDTO := notificationclient.CreateNotificationDTO{
+		ReceiverID: room.HostID, // Host of the room receives the notification
+		Type:       notificationclient.ReservationRequested,
+		Subject:    callerID, // Guest ID (who made the request)
+		Object:     room.ID,
+	}
+
+	if _, err := s.notificationClient.CreateNotification(util.TEL.Ctx(), jwt, createNotifDTO); err != nil {
+		util.TEL.Error("failed to send notification to host", err, "host_id", room.HostID)
+		// not returning error – notification failures shouldn’t break reservation creation
+	}
+
 	return req, nil
 }
 

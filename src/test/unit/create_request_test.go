@@ -13,7 +13,7 @@ import (
 )
 
 func Test_CreateRequest_Success(t *testing.T) {
-	svc, repo, userClient, roomClient := CreateTestRoomService()
+	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
 
 	dto := internal.CreateReservationRequestDTO{
 		RoomID:     1,
@@ -41,7 +41,7 @@ func Test_CreateRequest_Success(t *testing.T) {
 }
 
 func Test_CreateRequest_Unauthenticated(t *testing.T) {
-	svc, _, userClient, _ := CreateTestRoomService()
+	svc, _, userClient, _, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(nil, errors.New("not found"))
 
@@ -55,7 +55,7 @@ func Test_CreateRequest_Unauthenticated(t *testing.T) {
 }
 
 func Test_CreateRequest_UnauthorizedRole(t *testing.T) {
-	svc, _, userClient, _ := CreateTestRoomService()
+	svc, _, userClient, _, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Host, nil)
 
@@ -69,7 +69,7 @@ func Test_CreateRequest_UnauthorizedRole(t *testing.T) {
 }
 
 func Test_CreateRequest_RoomNotFound(t *testing.T) {
-	svc, _, userClient, roomClient := CreateTestRoomService()
+	svc, _, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(nil, errors.New("not found"))
@@ -84,7 +84,7 @@ func Test_CreateRequest_RoomNotFound(t *testing.T) {
 }
 
 func Test_CreateRequest_AvailabilityListNotFound(t *testing.T) {
-	svc, _, userClient, roomClient := CreateTestRoomService()
+	svc, _, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(DefaultRoom, nil)
@@ -100,7 +100,7 @@ func Test_CreateRequest_AvailabilityListNotFound(t *testing.T) {
 }
 
 func Test_CreateRequest_PriceListNotFound(t *testing.T) {
-	svc, _, userClient, roomClient := CreateTestRoomService()
+	svc, _, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(DefaultRoom, nil)
@@ -117,7 +117,7 @@ func Test_CreateRequest_PriceListNotFound(t *testing.T) {
 }
 
 func Test_CreateRequest_RoomNotAvailable(t *testing.T) {
-	svc, _, userClient, roomClient := CreateTestRoomService()
+	svc, _, userClient, roomClient, _ := CreateTestRoomService()
 
 	unavailable := &roomclient.RoomReservationQueryResponseDTO{Available: false, TotalCost: 0}
 
@@ -142,7 +142,7 @@ func Test_CreateRequest_RoomNotAvailable(t *testing.T) {
 }
 
 func Test_CreateRequest_InvalidGuestCount(t *testing.T) {
-	svc, _, userClient, roomClient := CreateTestRoomService()
+	svc, _, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(DefaultRoom, nil)
@@ -165,7 +165,7 @@ func Test_CreateRequest_InvalidGuestCount(t *testing.T) {
 }
 
 func Test_CreateRequest_ReversedDates(t *testing.T) {
-	svc, _, userClient, roomClient := CreateTestRoomService()
+	svc, _, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(DefaultRoom, nil)
@@ -188,7 +188,7 @@ func Test_CreateRequest_ReversedDates(t *testing.T) {
 }
 
 func Test_CreateRequest_ConflictDueToExistingRequestForUserInThatDateRange(t *testing.T) {
-	svc, repo, userClient, roomClient := CreateTestRoomService()
+	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
 
 	existing := []internal.ReservationRequest{
 		{
@@ -241,7 +241,7 @@ func Test_CreateRequest_ConflictDueToExistingRequestForUserInThatDateRange(t *te
 }
 
 func Test_CreateRequest_ConflictDueToReservationOverlap(t *testing.T) {
-	svc, repo, userClient, roomClient := CreateTestRoomService()
+	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(DefaultRoom, nil)
@@ -267,7 +267,7 @@ func Test_CreateRequest_ConflictDueToReservationOverlap(t *testing.T) {
 }
 
 func Test_CreateRequest_CreateFails(t *testing.T) {
-	svc, repo, userClient, roomClient := CreateTestRoomService()
+	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(DefaultRoom, nil)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bookem-reservation-service/client/notificationclient"
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/client/userclient"
 	internal "bookem-reservation-service/internal"
@@ -96,10 +97,11 @@ func main() {
 
 	userClient := userclient.NewUserClient()
 	roomClient := roomclient.NewRoomClient()
+	notificationClient := notificationclient.NewNotificationClient()
 
 	reservationRepo := internal.NewRepository(dB)
 
-	service := internal.NewService(reservationRepo, userClient, roomClient)
+	service := internal.NewService(reservationRepo, userClient, roomClient, notificationClient)
 	handler := internal.NewHandler(service)
 	route := *internal.NewRoute(handler)
 
