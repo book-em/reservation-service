@@ -11,7 +11,7 @@ import (
 )
 
 func Test_GetActiveGuestReservations_UserNotFound(t *testing.T) {
-	svc, mockRepo, mockUserClient, _ := CreateTestRoomService()
+	svc, mockRepo, mockUserClient, _, _ := CreateTestRoomService()
 
 	guest := DefaultUser_Guest
 
@@ -28,7 +28,7 @@ func Test_GetActiveGuestReservations_UserNotFound(t *testing.T) {
 }
 
 func Test_GetActiveGuestReservations_FindReservationsError(t *testing.T) {
-	svc, mockRepo, mockUserClient, _ := CreateTestRoomService()
+	svc, mockRepo, mockUserClient, _, _ := CreateTestRoomService()
 
 	guest := DefaultUser_Guest
 	var reservations []internal.Reservation
@@ -49,7 +49,7 @@ func Test_GetActiveGuestReservations_FindReservationsError(t *testing.T) {
 // This test automatically encapsulates enough of `ExtractActiveReservations`,
 // as its logic is exceptionally simple.
 func Test_GetActiveGuestReservations_SuccessNoneActive(t *testing.T) {
-	svc, mockRepo, mockUserClient, _ := CreateTestRoomService()
+	svc, mockRepo, mockUserClient, _, _ := CreateTestRoomService()
 
 	guest := DefaultUser_Guest
 	reservartion := *DefaultReservation
@@ -73,7 +73,7 @@ func Test_GetActiveGuestReservations_SuccessNoneActive(t *testing.T) {
 // This test automatically encapsulates enough of `ExtractActiveReservations`,
 // as its logic is exceptionally simple.
 func Test_GetActiveGuestReservations_Success(t *testing.T) {
-	svc, mockRepo, mockUserClient, _ := CreateTestRoomService()
+	svc, mockRepo, mockUserClient, _, _ := CreateTestRoomService()
 
 	guest := DefaultUser_Guest
 	reservartion1 := *DefaultReservation

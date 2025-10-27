@@ -10,7 +10,7 @@ import (
 )
 
 func Test_FindPendingRequestsByRoom_Success(t *testing.T) {
-	svc, repo, userClient, roomClient := CreateTestRoomService()
+	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(2)).Return(DefaultUser_Host, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(DefaultRoom, nil)
@@ -25,7 +25,7 @@ func Test_FindPendingRequestsByRoom_Success(t *testing.T) {
 }
 
 func Test_FindPendingRequestsByRoom_UserNotFound(t *testing.T) {
-	svc, _, userClient, _ := CreateTestRoomService()
+	svc, _, userClient, _, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(2)).Return(nil, errors.New("not found"))
 
@@ -36,7 +36,7 @@ func Test_FindPendingRequestsByRoom_UserNotFound(t *testing.T) {
 }
 
 func Test_FindPendingRequestsByRoom_UnauthorizedRole(t *testing.T) {
-	svc, _, userClient, _ := CreateTestRoomService()
+	svc, _, userClient, _, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 
@@ -47,7 +47,7 @@ func Test_FindPendingRequestsByRoom_UnauthorizedRole(t *testing.T) {
 }
 
 func Test_FindPendingRequestsByRoom_RoomNotFound(t *testing.T) {
-	svc, _, userClient, roomClient := CreateTestRoomService()
+	svc, _, userClient, roomClient, _ := CreateTestRoomService()
 
 	userClient.On("FindById", context.Background(), uint(2)).Return(DefaultUser_Host, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(nil, errors.New("not found"))
@@ -59,7 +59,7 @@ func Test_FindPendingRequestsByRoom_RoomNotFound(t *testing.T) {
 }
 
 func Test_FindPendingRequestsByRoom_UnauthorizedOwnership(t *testing.T) {
-	svc, _, userClient, roomClient := CreateTestRoomService()
+	svc, _, userClient, roomClient, _ := CreateTestRoomService()
 
 	otherRoom := *DefaultRoom
 	otherRoom.HostID = 99
