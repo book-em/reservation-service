@@ -27,7 +27,7 @@ func Test_ApproveReservationRequest_Success(t *testing.T) {
 	repo.On("RejectPendingRequestsInRange", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	callerID := 2
-	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1)
+	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.NoError(t, err)
 	repo.AssertCalled(t, "SetRequestStatus", uint(1), internal.Accepted)
@@ -39,7 +39,7 @@ func Test_ApproveReservationRequest_RequestNotFound(t *testing.T) {
 	repo.On("FindRequestByID", uint(1)).Return(nil, errors.New("not found"))
 
 	callerID := 2
-	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1)
+	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.Error(t, err)
 }
@@ -55,7 +55,7 @@ func Test_ApproveReservationRequest_UnauthorizedHost(t *testing.T) {
 	roomClient.On("FindById", context.Background(), uint(1)).Return(&room, nil)
 
 	callerID := 2
-	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1)
+	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.ErrorIs(t, err, internal.ErrUnauthorized)
 }
@@ -75,7 +75,7 @@ func Test_ApproveReservationRequest_CreateReservationFails(t *testing.T) {
 	repo.On("CreateReservation", mock.AnythingOfType("*internal.Reservation")).Return(errors.New("db create failed"))
 
 	callerID := 2
-	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1)
+	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "db create failed")

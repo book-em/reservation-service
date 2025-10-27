@@ -350,7 +350,8 @@ func (h *Handler) approveReservationRequest(ctx *gin.Context) {
 		return
 	}
 
-	err = h.service.ApproveReservationRequest(util.TEL.Ctx(), jwt.ID, uint(id))
+	jwt_string, _ := util.GetJwtString(ctx)
+	err = h.service.ApproveReservationRequest(util.TEL.Ctx(), jwt.ID, uint(id), jwt_string)
 	if err != nil {
 		util.TEL.Error("could not accept reservation request", err)
 		AbortError(ctx, err)
