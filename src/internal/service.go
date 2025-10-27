@@ -54,13 +54,13 @@ type Service interface {
 
 	// RejectReservationRequest changes the status of a pending reservation request
 	// to rejected.
-	RejectReservationRequest(context context.Context, hostID, requestID uint) error
+	RejectReservationRequest(context context.Context, hostID, requestID uint, jwt string) error
 
 	// ApproveReservationRequest approves a reservation request for a room
 	// and creates a corresponding reservation record.
 	ApproveReservationRequest(context context.Context, hostID, requestID uint, jwt string) error
 
-	CancelReservation(ctx context.Context, callerID uint, reservationID uint) error
+	CancelReservation(ctx context.Context, callerID uint, reservationID uint, jwt string) error
 
 	GetGuestCancellationCount(context context.Context, guestID uint) (uint, error)
 }
@@ -295,7 +295,7 @@ func (s *service) acceptReservationRequest(ctx context.Context, req *Reservation
 	}
 
 	if _, err := s.notificationClient.CreateNotification(util.TEL.Ctx(), jwt, createNotifDTO); err != nil {
-		util.TEL.Error("failed to send notification to host", err, "host_id", room.HostID)
+		util.TEL.Error("failed to send notification to guest", err, "guest_id", req.GuestID)
 		// not returning error – notification failures shouldn’t break reservation creation
 	}
 
@@ -492,7 +492,7 @@ func (s *service) ExtractActiveReservations(reservations []Reservation) []Reserv
 	return activeReservations
 }
 
-func (s *service) RejectReservationRequest(ctx context.Context, hostID, requestID uint) error {
+func (s *service) RejectReservationRequest(ctx context.Context, hostID, requestID uint, jwt string) error {
 	util.TEL.Push(ctx, "reject-reservation-request-service")
 	defer util.TEL.Pop()
 
@@ -519,6 +519,22 @@ func (s *service) RejectReservationRequest(ctx context.Context, hostID, requestI
 	}
 
 	util.TEL.Info("reservation request rejected", "request_id", requestID)
+
+	util.TEL.Push(ctx, "create-notification")
+	defer util.TEL.Pop()
+
+	createNotifDTO := notificationclient.CreateNotificationDTO{
+		ReceiverID: req.GuestID, // Guest receives the notification
+		Type:       notificationclient.ReservationDeclined,
+		Subject:    room.HostID,
+		Object:     room.ID,
+	}
+
+	if _, err := s.notificationClient.CreateNotification(util.TEL.Ctx(), jwt, createNotifDTO); err != nil {
+		util.TEL.Error("failed to send notification to guest", err, "guest_id", req.GuestID)
+		// not returning error – notification failures shouldn’t break reservation creation
+	}
+
 	return nil
 }
 
@@ -552,7 +568,7 @@ func (s *service) ApproveReservationRequest(ctx context.Context, hostID, request
 	return nil
 }
 
-func (s *service) CancelReservation(ctx context.Context, callerID uint, reservationID uint) error {
+func (s *service) CancelReservation(ctx context.Context, callerID uint, reservationID uint, jwt string) error {
 	util.TEL.Info("user wants to cancel reservation", "caller_id", callerID, "reservation_id", reservationID)
 
 	user, err := s.userClient.FindById(util.TEL.Ctx(), callerID)
@@ -597,6 +613,28 @@ func (s *service) CancelReservation(ctx context.Context, callerID uint, reservat
 	}
 
 	util.TEL.Info("reservation cancelled successfully", "reservation_id", reservationID)
+
+	util.TEL.Push(ctx, "create-notification")
+	defer util.TEL.Pop()
+
+	room, err := s.roomClient.FindById(util.TEL.Ctx(), reservation.RoomID)
+	if err != nil {
+		util.TEL.Error("room not found", err, "id", reservation.RoomID)
+		return err
+	}
+
+	createNotifDTO := notificationclient.CreateNotificationDTO{
+		ReceiverID: room.HostID,
+		Type:       notificationclient.ReservationCancelled,
+		Subject:    reservation.GuestID,
+		Object:     reservation.RoomID,
+	}
+
+	if _, err := s.notificationClient.CreateNotification(util.TEL.Ctx(), jwt, createNotifDTO); err != nil {
+		util.TEL.Error("failed to send notification to host", err, "host_id", room.HostID)
+		// not returning error – notification failures shouldn’t break reservation creation
+	}
+
 	return nil
 }
 
