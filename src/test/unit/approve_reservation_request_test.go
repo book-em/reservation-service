@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bookem-reservation-service/client/notificationclient"
 	"bookem-reservation-service/internal"
 	"context"
 	"errors"
@@ -11,7 +12,7 @@ import (
 )
 
 func Test_ApproveReservationRequest_Success(t *testing.T) {
-	svc, repo, _, roomClient, _ := CreateTestRoomService()
+	svc, repo, _, roomClient, notifClient := CreateTestRoomService()
 
 	req := &internal.ReservationRequest{ID: 1, RoomID: 1, GuestID: 1, GuestCount: 2}
 	room := *DefaultRoom
@@ -27,6 +28,9 @@ func Test_ApproveReservationRequest_Success(t *testing.T) {
 	repo.On("RejectPendingRequestsInRange", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
 	callerID := 2
+	notifClient.On("CreateNotification", mock.Anything, mock.Anything, mock.Anything).
+		Return(&notificationclient.NotificationDTO{}, nil)
+
 	err := svc.ApproveReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.NoError(t, err)
