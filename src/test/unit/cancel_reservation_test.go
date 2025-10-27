@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bookem-reservation-service/client/notificationclient"
 	"bookem-reservation-service/internal"
 	"context"
 	"errors"
@@ -8,21 +9,27 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestCancelReservation_Success(t *testing.T) {
-	svc, mockRepo, mockUser, _, _ := CreateTestRoomService()
+	svc, mockRepo, mockUser, mockRoom, notifClient := CreateTestRoomService()
 
 	res := &internal.Reservation{
 		ID:        1,
 		GuestID:   1,
+		RoomID:    1,
 		DateFrom:  time.Now().Add(48 * time.Hour),
 		Cancelled: false,
 	}
 
-	mockUser.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
+	mockUser.On("FindById", mock.Anything, uint(1)).Return(DefaultUser_Guest, nil)
 	mockRepo.On("FindReservationById", uint(1)).Return(res, nil)
 	mockRepo.On("CancelReservation", uint(1)).Return(nil)
+	mockRoom.On("FindById", mock.Anything, uint(1)).Return(DefaultRoom, nil)
+
+	notifClient.On("CreateNotification", mock.Anything, mock.Anything, mock.Anything).
+		Return(&notificationclient.NotificationDTO{}, nil)
 
 	err := svc.CancelReservation(context.Background(), 1, 1, "Token")
 
