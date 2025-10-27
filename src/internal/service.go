@@ -58,7 +58,7 @@ type Service interface {
 
 	// ApproveReservationRequest approves a reservation request for a room
 	// and creates a corresponding reservation record.
-	ApproveReservationRequest(context context.Context, hostID, requestID uint) error
+	ApproveReservationRequest(context context.Context, hostID, requestID uint, jwt string) error
 
 	CancelReservation(ctx context.Context, callerID uint, reservationID uint) error
 
@@ -211,7 +211,7 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 
 	if room.AutoApprove {
 		util.TEL.Info("auto-approval is enabled, accepting reservation request automatically", "room_id", room.ID)
-		if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room); err != nil {
+		if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room, jwt); err != nil {
 			util.TEL.Error("auto-approval process failed", err)
 			return nil, err
 		}
@@ -237,7 +237,7 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 	return req, nil
 }
 
-func (s *service) acceptReservationRequest(ctx context.Context, req *ReservationRequest, room *roomclient.RoomDTO) error {
+func (s *service) acceptReservationRequest(ctx context.Context, req *ReservationRequest, room *roomclient.RoomDTO, jwt string) error {
 	util.TEL.Info("accept reservation request", "room_id", req.RoomID, "guest_id", req.GuestID)
 
 	util.TEL.Debug("find current availability and price lists")
@@ -283,6 +283,22 @@ func (s *service) acceptReservationRequest(ctx context.Context, req *Reservation
 	req.Status = Accepted
 
 	util.TEL.Info("reservation request accepted successfully", "request_id", req.ID)
+
+	util.TEL.Push(ctx, "create-notification")
+	defer util.TEL.Pop()
+
+	createNotifDTO := notificationclient.CreateNotificationDTO{
+		ReceiverID: req.GuestID, // Guest receives the notification
+		Type:       notificationclient.ReservationAccepted,
+		Subject:    room.HostID,
+		Object:     room.ID,
+	}
+
+	if _, err := s.notificationClient.CreateNotification(util.TEL.Ctx(), jwt, createNotifDTO); err != nil {
+		util.TEL.Error("failed to send notification to host", err, "host_id", room.HostID)
+		// not returning error – notification failures shouldn’t break reservation creation
+	}
+
 	return nil
 }
 
@@ -506,7 +522,7 @@ func (s *service) RejectReservationRequest(ctx context.Context, hostID, requestI
 	return nil
 }
 
-func (s *service) ApproveReservationRequest(ctx context.Context, hostID, requestID uint) error {
+func (s *service) ApproveReservationRequest(ctx context.Context, hostID, requestID uint, jwt string) error {
 	util.TEL.Push(ctx, "approve-reservation-request-service")
 	defer util.TEL.Pop()
 
@@ -527,7 +543,7 @@ func (s *service) ApproveReservationRequest(ctx context.Context, hostID, request
 		return ErrUnauthorized
 	}
 
-	if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room); err != nil {
+	if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room, jwt); err != nil {
 		util.TEL.Error("could not change status to accepted", err, "request_id", requestID)
 		return err
 	}
