@@ -24,7 +24,7 @@ func TestCancelReservation_Success(t *testing.T) {
 	mockRepo.On("FindReservationById", uint(1)).Return(res, nil)
 	mockRepo.On("CancelReservation", uint(1)).Return(nil)
 
-	err := svc.CancelReservation(context.Background(), 1, 1)
+	err := svc.CancelReservation(context.Background(), 1, 1, "Token")
 
 	assert.NoError(t, err)
 	mockRepo.AssertCalled(t, "CancelReservation", uint(1))
@@ -43,7 +43,7 @@ func TestCancelReservation_AlreadyCancelled(t *testing.T) {
 	mockUser.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	mockRepo.On("FindReservationById", uint(2)).Return(res, nil)
 
-	err := svc.CancelReservation(context.Background(), 1, 2)
+	err := svc.CancelReservation(context.Background(), 1, 2, "Token")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "already cancelled")
 }
@@ -61,7 +61,7 @@ func TestCancelReservation_AlreadyStarted(t *testing.T) {
 	mockUser.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	mockRepo.On("FindReservationById", uint(3)).Return(res, nil)
 
-	err := svc.CancelReservation(context.Background(), 1, 3)
+	err := svc.CancelReservation(context.Background(), 1, 3, "Token")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot cancel reservation that already started")
 }
@@ -79,7 +79,7 @@ func TestCancelReservation_WrongGuest(t *testing.T) {
 	mockUser.On("FindById", context.Background(), uint(1)).Return(DefaultUser_Guest, nil)
 	mockRepo.On("FindReservationById", uint(4)).Return(res, nil)
 
-	err := svc.CancelReservation(context.Background(), 1, 4)
+	err := svc.CancelReservation(context.Background(), 1, 4, "Token")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Unauthorized")
 }
@@ -89,7 +89,7 @@ func TestCancelReservation_UserNotFound(t *testing.T) {
 
 	mockUser.On("FindById", context.Background(), uint(1)).Return(nil, errors.New("user not found"))
 
-	err := svc.CancelReservation(context.Background(), 1, 5)
+	err := svc.CancelReservation(context.Background(), 1, 5, "Token")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Unauthenticated")
 }

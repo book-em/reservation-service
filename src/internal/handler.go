@@ -316,7 +316,8 @@ func (h *Handler) rejectReservationRequest(ctx *gin.Context) {
 		return
 	}
 
-	err = h.service.RejectReservationRequest(util.TEL.Ctx(), jwt.ID, uint(id))
+	jwt_string, _ := util.GetJwtString(ctx)
+	err = h.service.RejectReservationRequest(util.TEL.Ctx(), jwt.ID, uint(id), jwt_string)
 	if err != nil {
 		util.TEL.Error("could not reject reservation request", err)
 		AbortError(ctx, err)
@@ -385,7 +386,8 @@ func (h *Handler) cancelReservation(ctx *gin.Context) {
 		return
 	}
 
-	err = h.service.CancelReservation(util.TEL.Ctx(), jwt.ID, uint(id))
+	jwt_string, _ := util.GetJwtString(ctx)
+	err = h.service.CancelReservation(util.TEL.Ctx(), jwt.ID, uint(id), jwt_string)
 	if err != nil {
 		util.TEL.Error("failed to cancel reservation", err)
 		AbortError(ctx, err)
