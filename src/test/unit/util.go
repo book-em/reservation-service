@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bookem-reservation-service/client/notificationclient"
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/client/userclient"
 	"bookem-reservation-service/internal"
@@ -15,13 +16,15 @@ func CreateTestRoomService() (
 	*MockReservationRepo,
 	*MockUserClient,
 	*MockRoomClient,
+	*MockNotificationClient,
 ) {
 	mockRepo := new(MockReservationRepo)
 	mockUserClient := new(MockUserClient)
 	mockRoomClient := new(MockRoomClient)
+	mockNotificationClient := new(MockNotificationClient)
 
-	svc := internal.NewService(mockRepo, mockUserClient, mockRoomClient)
-	return svc, mockRepo, mockUserClient, mockRoomClient
+	svc := internal.NewService(mockRepo, mockUserClient, mockRoomClient, mockNotificationClient)
+	return svc, mockRepo, mockUserClient, mockRoomClient, mockNotificationClient
 }
 
 // ----------------------------------------------- Mock Reservation repo
@@ -162,6 +165,18 @@ func (r *MockReservationRepo) FindReservationById(id uint) (*internal.Reservatio
 		return res, args.Error(1)
 	}
 	return nil, args.Error(1)
+}
+
+// ----------------------------------------------- Mock notification client
+
+type MockNotificationClient struct {
+	mock.Mock
+}
+
+func (m *MockNotificationClient) CreateNotification(ctx context.Context, jwt string, dto notificationclient.CreateNotificationDTO) (*notificationclient.NotificationDTO, error) {
+	args := m.Called(ctx, jwt, dto)
+	notification, _ := args.Get(0).(*notificationclient.NotificationDTO)
+	return notification, args.Error(1)
 }
 
 // ----------------------------------------------- Mock data

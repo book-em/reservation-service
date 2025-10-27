@@ -11,7 +11,7 @@ import (
 )
 
 func Test_ApproveReservationRequest_Success(t *testing.T) {
-	svc, repo, _, roomClient := CreateTestRoomService()
+	svc, repo, _, roomClient, _ := CreateTestRoomService()
 
 	req := &internal.ReservationRequest{ID: 1, RoomID: 1, GuestID: 1, GuestCount: 2}
 	room := *DefaultRoom
@@ -34,7 +34,7 @@ func Test_ApproveReservationRequest_Success(t *testing.T) {
 }
 
 func Test_ApproveReservationRequest_RequestNotFound(t *testing.T) {
-	svc, repo, _, _ := CreateTestRoomService()
+	svc, repo, _, _, _ := CreateTestRoomService()
 
 	repo.On("FindRequestByID", uint(1)).Return(nil, errors.New("not found"))
 
@@ -45,7 +45,7 @@ func Test_ApproveReservationRequest_RequestNotFound(t *testing.T) {
 }
 
 func Test_ApproveReservationRequest_UnauthorizedHost(t *testing.T) {
-	svc, repo, _, roomClient := CreateTestRoomService()
+	svc, repo, _, roomClient, _ := CreateTestRoomService()
 
 	req := &internal.ReservationRequest{ID: 1, RoomID: 1}
 	room := *DefaultRoom
@@ -61,7 +61,7 @@ func Test_ApproveReservationRequest_UnauthorizedHost(t *testing.T) {
 }
 
 func Test_ApproveReservationRequest_CreateReservationFails(t *testing.T) {
-	svc, repo, _, roomClient := CreateTestRoomService()
+	svc, repo, _, roomClient, _ := CreateTestRoomService()
 
 	req := &internal.ReservationRequest{ID: 1, RoomID: 1, GuestID: 1, GuestCount: 2}
 	room := *DefaultRoom
