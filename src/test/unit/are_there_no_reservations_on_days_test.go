@@ -12,7 +12,7 @@ import (
 )
 
 func Test_AreThereReservationsOnDays_AllDaysFree(t *testing.T) {
-	svc, repo, _, _ := CreateTestRoomService()
+	svc, repo, _, _, _ := CreateTestRoomService()
 
 	// Mock: No reservations on any day
 	repo.On("FindReservationsByRoomIDForDay", uint(1), mock.Anything).Return([]internal.Reservation{}, nil)
@@ -27,7 +27,7 @@ func Test_AreThereReservationsOnDays_AllDaysFree(t *testing.T) {
 }
 
 func Test_AreThereReservationsOnDays_OneDayBooked(t *testing.T) {
-	svc, repo, _, _ := CreateTestRoomService()
+	svc, repo, _, _, _ := CreateTestRoomService()
 
 	// Mock: First two days free, third day has a reservation
 	repo.On("FindReservationsByRoomIDForDay", uint(1), time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC)).Return([]internal.Reservation{}, nil)
@@ -46,7 +46,7 @@ func Test_AreThereReservationsOnDays_OneDayBooked(t *testing.T) {
 }
 
 func Test_AreThereReservationsOnDays_RepoError(t *testing.T) {
-	svc, repo, _, _ := CreateTestRoomService()
+	svc, repo, _, _, _ := CreateTestRoomService()
 
 	// Mock: Error on first day
 	repo.On("FindReservationsByRoomIDForDay", uint(1), time.Date(2025, 9, 1, 0, 0, 0, 0, time.UTC)).Return([]internal.Reservation{}, errors.New("db error"))

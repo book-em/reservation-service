@@ -11,7 +11,7 @@ import (
 )
 
 func TestCancelReservation_Success(t *testing.T) {
-	svc, mockRepo, mockUser, _ := CreateTestRoomService()
+	svc, mockRepo, mockUser, _, _ := CreateTestRoomService()
 
 	res := &internal.Reservation{
 		ID:        1,
@@ -31,7 +31,7 @@ func TestCancelReservation_Success(t *testing.T) {
 }
 
 func TestCancelReservation_AlreadyCancelled(t *testing.T) {
-	svc, mockRepo, mockUser, _ := CreateTestRoomService()
+	svc, mockRepo, mockUser, _, _ := CreateTestRoomService()
 
 	res := &internal.Reservation{
 		ID:        2,
@@ -49,7 +49,7 @@ func TestCancelReservation_AlreadyCancelled(t *testing.T) {
 }
 
 func TestCancelReservation_AlreadyStarted(t *testing.T) {
-	svc, mockRepo, mockUser, _ := CreateTestRoomService()
+	svc, mockRepo, mockUser, _, _ := CreateTestRoomService()
 
 	res := &internal.Reservation{
 		ID:        3,
@@ -67,7 +67,7 @@ func TestCancelReservation_AlreadyStarted(t *testing.T) {
 }
 
 func TestCancelReservation_WrongGuest(t *testing.T) {
-	svc, mockRepo, mockUser, _ := CreateTestRoomService()
+	svc, mockRepo, mockUser, _, _ := CreateTestRoomService()
 
 	res := &internal.Reservation{
 		ID:        4,
@@ -85,7 +85,7 @@ func TestCancelReservation_WrongGuest(t *testing.T) {
 }
 
 func TestCancelReservation_UserNotFound(t *testing.T) {
-	svc, _, mockUser, _ := CreateTestRoomService()
+	svc, _, mockUser, _, _ := CreateTestRoomService()
 
 	mockUser.On("FindById", context.Background(), uint(1)).Return(nil, errors.New("user not found"))
 
