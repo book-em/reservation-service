@@ -21,7 +21,7 @@ func Test_RejectReservationRequest_Success(t *testing.T) {
 	repo.On("SetRequestStatus", uint(1), internal.Rejected).Return(nil)
 
 	callerID := 2
-	err := svc.RejectReservationRequest(context.Background(), uint(callerID), 1)
+	err := svc.RejectReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.NoError(t, err)
 	repo.AssertCalled(t, "SetRequestStatus", uint(1), internal.Rejected)
@@ -33,7 +33,7 @@ func Test_RejectReservationRequest_RequestNotFound(t *testing.T) {
 	repo.On("FindRequestByID", uint(1)).Return(nil, errors.New("not found"))
 
 	callerID := 2
-	err := svc.RejectReservationRequest(context.Background(), uint(callerID), 1)
+	err := svc.RejectReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.Error(t, err)
 }
@@ -49,7 +49,7 @@ func Test_RejectReservationRequest_UnauthorizedHost(t *testing.T) {
 	roomClient.On("FindById", context.Background(), uint(1)).Return(&room, nil)
 
 	callerID := 2
-	err := svc.RejectReservationRequest(context.Background(), uint(callerID), 1)
+	err := svc.RejectReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.ErrorIs(t, err, internal.ErrUnauthorized)
 }
@@ -66,7 +66,7 @@ func Test_RejectReservationRequest_SetStatusFails(t *testing.T) {
 	repo.On("SetRequestStatus", uint(1), internal.Rejected).Return(errors.New("db error"))
 
 	callerID := 2
-	err := svc.RejectReservationRequest(context.Background(), uint(callerID), 1)
+	err := svc.RejectReservationRequest(context.Background(), uint(callerID), 1, "Token")
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "db error")
