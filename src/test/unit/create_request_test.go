@@ -1,6 +1,7 @@
 package test
 
 import (
+	"bookem-reservation-service/client/notificationclient"
 	"bookem-reservation-service/client/roomclient"
 	"bookem-reservation-service/internal"
 	"context"
@@ -13,7 +14,7 @@ import (
 )
 
 func Test_CreateRequest_Success(t *testing.T) {
-	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
+	svc, repo, userClient, roomClient, notifClient := CreateTestRoomService()
 
 	dto := internal.CreateReservationRequestDTO{
 		RoomID:     1,
@@ -31,6 +32,8 @@ func Test_CreateRequest_Success(t *testing.T) {
 	roomClient.On("FindCurrentAvailabilityListOfRoom", context.Background(), uint(1)).Return(DefaultAvailabilityList, nil)
 	roomClient.On("FindCurrentPricelistOfRoom", context.Background(), uint(1)).Return(DefaultPriceList, nil)
 	roomClient.On("QueryForReservation", context.Background(), mock.Anything, mock.Anything).Return(DefaultReservationQueryResponse, nil)
+	notifClient.On("CreateNotification", mock.Anything, mock.Anything, mock.Anything).
+		Return(&notificationclient.NotificationDTO{}, nil)
 
 	auth := internal.AuthContext{CallerID: 1, JWT: "token"}
 	req, err := svc.CreateRequest(context.Background(), auth, dto)
@@ -188,7 +191,7 @@ func Test_CreateRequest_ReversedDates(t *testing.T) {
 }
 
 func Test_CreateRequest_ConflictDueToExistingRequestForUserInThatDateRange(t *testing.T) {
-	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
+	svc, repo, userClient, roomClient, notifClient := CreateTestRoomService()
 
 	existing := []internal.ReservationRequest{
 		{
@@ -206,6 +209,8 @@ func Test_CreateRequest_ConflictDueToExistingRequestForUserInThatDateRange(t *te
 	roomClient.On("FindCurrentAvailabilityListOfRoom", context.Background(), uint(1)).Return(DefaultAvailabilityList, nil)
 	roomClient.On("FindCurrentPricelistOfRoom", context.Background(), uint(1)).Return(DefaultPriceList, nil)
 	roomClient.On("QueryForReservation", context.Background(), mock.Anything, mock.Anything).Return(DefaultReservationQueryResponse, nil)
+	notifClient.On("CreateNotification", mock.Anything, mock.Anything, mock.Anything).
+		Return(&notificationclient.NotificationDTO{}, nil)
 
 	auth := internal.AuthContext{CallerID: 1, JWT: "token"}
 
