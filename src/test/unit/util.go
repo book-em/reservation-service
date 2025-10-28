@@ -226,6 +226,7 @@ var DefaultRoom = &roomclient.RoomDTO{
 	Name:      "Test Room",
 	MinGuests: 1,
 	MaxGuests: 4,
+	Deleted:   false,
 }
 
 var DefaultAvailabilityList = &roomclient.RoomAvailabilityListDTO{
