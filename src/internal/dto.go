@@ -67,3 +67,7 @@ func NewReservationDTO(r Reservation) ReservationDTO {
 type RoomIDsDTO struct {
 	IDs []uint `json:"ids"`
 }
+
+type EligibilityDTO struct {
+	Eligible bool `json:"eligible"`
+}

@@ -63,6 +63,8 @@ type Service interface {
 	CancelReservation(ctx context.Context, callerID uint, reservationID uint, jwt string) error
 
 	GetGuestCancellationCount(context context.Context, guestID uint) (uint, error)
+
+	CanUserRateHost(ctx context.Context, guestID, hostID uint) (bool, error)
 }
 
 type service struct {
@@ -653,3 +655,31 @@ func (s *service) GetGuestCancellationCount(ctx context.Context, guestID uint) (
 	util.TEL.Debug("guest cancellation count calculated", "guest_id", guestID, "count", count)
 	return uint(count), nil
 }
+
+func (s *service) CanUserRateHost(ctx context.Context, guestID, hostID uint) (bool, error) {
+	util.TEL.Push(ctx, "eligibility-can-user-rate-host")
+	defer util.TEL.Pop()
+
+	rooms, err := s.roomClient.FindByHostId(util.TEL.Ctx(), hostID)
+	if err != nil {
+		util.TEL.Error("failed to fetch rooms by host", err, "host_id", hostID)
+		return false, err
+	}
+	if len(rooms) == 0 {
+		util.TEL.Info("host has no rooms; guest cannot have stayed", "host_id", hostID)
+		return false, nil
+	}
+
+	roomIDs := make([]uint, 0, len(rooms))
+	for _, r := range rooms {
+		roomIDs = append(roomIDs, r.ID)
+	}
+
+	ok, err := s.repo.HasGuestPastReservationInRooms(guestID, roomIDs, time.Now().UTC())
+	if err != nil {
+		util.TEL.Error("repo eligibility check failed", err)
+		return false, err
+	}
+	return ok, nil
+}
+
