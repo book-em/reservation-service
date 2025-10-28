@@ -207,6 +207,7 @@ var DefaultUser_Guest = &userclient.UserDTO{
 	Surname:  "gsurname",
 	Role:     "guest",
 	Address:  "gAddress 123",
+	Deleted:  false,
 }
 
 var DefaultUser_Host = &userclient.UserDTO{
