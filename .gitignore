@@ -33,3 +33,7 @@ override.env
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# macOS system files
+.DS_Store
+**/.DS_Store
