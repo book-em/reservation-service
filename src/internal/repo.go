@@ -26,6 +26,8 @@ type Repository interface {
 	CountGuestCancellations(guestID uint) (int64, error)
 	FindReservationsByRoomID(roomID uint) ([]Reservation, error)
 	FindReservationById(id uint) (*Reservation, error)
+	HasGuestPastReservationInRooms(guestID uint, roomIDs []uint, now time.Time) (bool, error)
+
 }
 
 type repository struct {
@@ -127,3 +129,15 @@ func (r *repository) FindReservationById(id uint) (*Reservation, error) {
 	}
 	return &reservation, nil
 }
+
+func (r *repository) HasGuestPastReservationInRooms(guestID uint, roomIDs []uint, now time.Time) (bool, error) {
+	if len(roomIDs) == 0 {
+		return false, nil
+	}
+	var count int64
+	err := r.db.Model(&Reservation{}).
+		Where("guest_id = ? AND cancelled = ? AND date_to < ? AND room_id IN ?", guestID, false, now, roomIDs).
+		Count(&count).Error
+	return count > 0, err
+}
+

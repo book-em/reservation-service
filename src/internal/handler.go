@@ -27,6 +27,8 @@ func (r *Route) Route(rg *gin.RouterGroup) {
 	rg.PUT("/req/:id/reject", r.handler.rejectReservationRequest)
 	rg.PUT("/req/:id/approve", r.handler.approveReservationRequest)
 	rg.DELETE("/reservations/:id/cancel", r.handler.cancelReservation)
+
+	rg.GET("/reservations/guest-stayed-with-host", r.handler.canUserRateHost)
 }
 
 type Handler struct{ service Service }
@@ -395,4 +397,34 @@ func (h *Handler) cancelReservation(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusNoContent, nil)
+}
+
+func (h *Handler) canUserRateHost(ctx *gin.Context) {
+    util.TEL.Push(ctx.Request.Context(), "can-user-rate-host-api")
+    defer util.TEL.Pop()
+
+    guestIDStr := ctx.Query("guestId")
+    hostIDStr := ctx.Query("hostId")
+
+    guestID64, err := strconv.ParseUint(guestIDStr, 10, 64)
+    if err != nil || guestID64 == 0 {
+        util.TEL.Error("invalid guestId", err, "guestId", guestIDStr)
+        AbortError(ctx, ErrBadRequestCustom("invalid guestId"))
+        return
+    }
+    hostID64, err := strconv.ParseUint(hostIDStr, 10, 64)
+    if err != nil || hostID64 == 0 {
+        util.TEL.Error("invalid hostId", err, "hostId", hostIDStr)
+        AbortError(ctx, ErrBadRequestCustom("invalid hostId"))
+        return
+    }
+
+    ok, err := h.service.CanUserRateHost(util.TEL.Ctx(), uint(guestID64), uint(hostID64))
+    if err != nil {
+        util.TEL.Error("failed to check if user can rate host", err)
+        AbortError(ctx, err)
+        return
+    }
+    ctx.JSON(http.StatusOK, EligibilityDTO{Eligible: ok})
+
 }
