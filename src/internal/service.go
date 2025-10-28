@@ -329,7 +329,19 @@ func (s *service) FindPendingRequestsByGuest(context context.Context, callerID u
 
 	util.TEL.Push(context, "find-pending-reservation-requests-by-guest-in-db")
 	defer util.TEL.Pop()
-	return s.repo.FindPendingRequestsByGuestID(callerID)
+	requests, err := s.repo.FindPendingRequestsByGuestID(callerID)
+
+	util.TEL.Push(context, "filter out requests from deleted rooms")
+	var validRequests []ReservationRequest
+	for _, request := range requests {
+		util.TEL.Debug("find room", "id", request.RoomID)
+		room, err := s.roomClient.FindById(util.TEL.Ctx(), request.RoomID)
+		if err == nil && room.Deleted == false {
+			validRequests = append(validRequests, request)
+		}
+	}
+
+	return validRequests, nil
 }
 
 func (s *service) FindPendingRequestsByRoom(context context.Context, callerID uint, roomID uint) ([]ReservationRequest, error) {
