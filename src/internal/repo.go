@@ -27,7 +27,6 @@ type Repository interface {
 	FindReservationsByRoomID(roomID uint) ([]Reservation, error)
 	FindReservationById(id uint) (*Reservation, error)
 	HasGuestPastReservationInRooms(guestID uint, roomIDs []uint, now time.Time) (bool, error)
-
 }
 
 type repository struct {

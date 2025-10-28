@@ -65,6 +65,7 @@ type Service interface {
 	GetGuestCancellationCount(context context.Context, guestID uint) (uint, error)
 
 	CanUserRateHost(ctx context.Context, guestID, hostID uint) (bool, error)
+	CanUserRateRoom(ctx context.Context, guestID, roomID uint) (bool, error)
 }
 
 type service struct {
@@ -678,6 +679,18 @@ func (s *service) CanUserRateHost(ctx context.Context, guestID, hostID uint) (bo
 	ok, err := s.repo.HasGuestPastReservationInRooms(guestID, roomIDs, time.Now().UTC())
 	if err != nil {
 		util.TEL.Error("repo eligibility check failed", err)
+		return false, err
+	}
+	return ok, nil
+}
+
+func (s *service) CanUserRateRoom(ctx context.Context, guestID, roomID uint) (bool, error) {
+	util.TEL.Push(ctx, "eligibility-can-user-rate-room")
+	defer util.TEL.Pop()
+
+	ok, err := s.repo.HasGuestPastReservationInRooms(guestID, []uint{roomID}, time.Now().UTC())
+	if err != nil {
+		util.TEL.Error("repo eligibility check failed", err, "guest_id", guestID, "room_id", roomID)
 		return false, err
 	}
 	return ok, nil
