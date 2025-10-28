@@ -106,6 +106,12 @@ func (s *service) CreateRequest(context context.Context, authctx AuthContext, dt
 		return nil, ErrUnauthorized
 	}
 
+	util.TEL.Debug("check-account-deletion", nil, "id", callerID)
+	if user.Deleted {
+		util.TEL.Error("account is deleted", nil, "id", callerID)
+		return nil, ErrUnauthorized
+	}
+
 	util.TEL.Debug("find room", "id", dto.RoomID)
 	room, err := s.roomClient.FindById(util.TEL.Ctx(), dto.RoomID)
 	if err != nil {
