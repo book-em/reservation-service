@@ -12,16 +12,30 @@ import (
 func Test_FindPendingRequestsByRoom_Success(t *testing.T) {
 	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
 
-	userClient.On("FindById", context.Background(), uint(2)).Return(DefaultUser_Host, nil)
+	guest1Val := *DefaultUser_Guest
+	guest1 := &guest1Val
+	guest1.Id = 3
+	guest1.Deleted = true
+
+	guest2Val := *DefaultUser_Guest
+	guest2 := &guest2Val
+	guest2.Id = 4
+	guest2.Deleted = false
+
+	userClient.On("FindById", context.Background(), uint(2)).Return(DefaultUser_Host, nil).Once()
 	roomClient.On("FindById", context.Background(), uint(1)).Return(DefaultRoom, nil)
 	repo.On("FindPendingRequestsByRoomID", uint(1)).Return([]internal.ReservationRequest{
-		{ID: 1, RoomID: 1, GuestID: 1, Status: internal.Pending},
+		{ID: 1, RoomID: 1, GuestID: guest1.Id, Status: internal.Pending},
+		{ID: 2, RoomID: 1, GuestID: guest2.Id, Status: internal.Pending},
 	}, nil)
+	userClient.On("FindById", context.Background(), guest1.Id).Return(guest1, nil).Once()
+	userClient.On("FindById", context.Background(), guest2.Id).Return(guest2, nil).Once()
 
 	result, err := svc.FindPendingRequestsByRoom(context.Background(), 2, 1)
 
 	assert.NoError(t, err)
-	assert.Len(t, result, 1)
+	assert.Equal(t, 1, len(result))
+	assert.Equal(t, guest2.Id, result[0].GuestID)
 }
 
 func Test_FindPendingRequestsByRoom_UserNotFound(t *testing.T) {
