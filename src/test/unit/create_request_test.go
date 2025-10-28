@@ -297,3 +297,20 @@ func Test_CreateRequest_CreateFails(t *testing.T) {
 	assert.ErrorContains(t, err, "db error")
 	assert.Nil(t, req)
 }
+
+func Test_CreateRequest_DeletedAccount(t *testing.T) {
+	svc, _, userClient, _, _ := CreateTestRoomService()
+
+	user := DefaultUser_Guest
+	user.Deleted = true
+
+	userClient.On("FindById", context.Background(), uint(1)).Return(user, nil)
+
+	auth := internal.AuthContext{CallerID: 1, JWT: "token"}
+	dto := internal.CreateReservationRequestDTO{RoomID: 1}
+
+	req, err := svc.CreateRequest(context.Background(), auth, dto)
+
+	assert.ErrorIs(t, err, internal.ErrUnauthorized)
+	assert.Nil(t, req)
+}

@@ -18,6 +18,7 @@ type UserDTO struct {
 	Surname  string `json:"surname" `
 	Address  string `json:"address" `
 	Role     string `json:"role"    `
+	Deleted  bool   `json:"deleted" `
 }
 
 type LoginDTO struct {
