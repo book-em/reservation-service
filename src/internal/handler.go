@@ -29,6 +29,7 @@ func (r *Route) Route(rg *gin.RouterGroup) {
 	rg.DELETE("/reservations/:id/cancel", r.handler.cancelReservation)
 
 	rg.GET("/reservations/guest-stayed-with-host", r.handler.canUserRateHost)
+	rg.GET("/reservations/guest-stayed-in-room", r.handler.canUserRateRoom)
 }
 
 type Handler struct{ service Service }
@@ -427,4 +428,34 @@ func (h *Handler) canUserRateHost(ctx *gin.Context) {
     }
     ctx.JSON(http.StatusOK, EligibilityDTO{Eligible: ok})
 
+}
+
+func (h *Handler) canUserRateRoom(ctx *gin.Context) {
+	util.TEL.Push(ctx.Request.Context(), "can-user-rate-room-api")
+	defer util.TEL.Pop()
+
+	guestIDStr := ctx.Query("guestId")
+	roomIDStr := ctx.Query("roomId")
+
+	guestID64, err := strconv.ParseUint(guestIDStr, 10, 64)
+	if err != nil || guestID64 == 0 {
+		util.TEL.Error("invalid guestId", err, "guestId", guestIDStr)
+		AbortError(ctx, ErrBadRequestCustom("invalid guestId"))
+		return
+	}
+	roomID64, err := strconv.ParseUint(roomIDStr, 10, 64)
+	if err != nil || roomID64 == 0 {
+		util.TEL.Error("invalid roomId", err, "roomId", roomIDStr)
+		AbortError(ctx, ErrBadRequestCustom("invalid roomId"))
+		return
+	}
+
+	ok, err := h.service.CanUserRateRoom(util.TEL.Ctx(), uint(guestID64), uint(roomID64))
+	if err != nil {
+		util.TEL.Error("service error", err)
+		AbortError(ctx, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, EligibilityDTO{Eligible: ok})
 }
