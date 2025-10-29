@@ -11,7 +11,17 @@ import (
 )
 
 func Test_GetPastReservationsByGuest_Success(t *testing.T) {
-	svc, repo, _, _, _ := CreateTestRoomService()
+	svc, repo, _, roomClient, _ := CreateTestRoomService()
+
+	room1Val := *DefaultRoom
+	room1 := &room1Val
+	room1.ID = 1
+	room1.Deleted = false
+
+	room2Val := *DefaultRoom
+	room2 := &room2Val
+	room2.ID = 2
+	room2.Deleted = false
 
 	before := time.Now().UTC()
 	guestID := uint(10)
@@ -19,7 +29,7 @@ func Test_GetPastReservationsByGuest_Success(t *testing.T) {
 	reservations := []internal.Reservation{
 		{
 			ID:         1,
-			RoomID:     5,
+			RoomID:     room1.ID,
 			DateFrom:   before.AddDate(0, -1, 0),
 			DateTo:     before.AddDate(0, -1, 1),
 			GuestCount: 2,
@@ -29,7 +39,7 @@ func Test_GetPastReservationsByGuest_Success(t *testing.T) {
 		},
 		{
 			ID:         2,
-			RoomID:     6,
+			RoomID:     room2.ID,
 			DateFrom:   before.AddDate(0, -2, 0),
 			DateTo:     before.AddDate(0, -2, 1),
 			GuestCount: 3,
@@ -38,6 +48,8 @@ func Test_GetPastReservationsByGuest_Success(t *testing.T) {
 			Cost:       400,
 		},
 	}
+	roomClient.On("FindById", context.Background(), room1.ID).Return(room1, nil).Once()
+	roomClient.On("FindById", context.Background(), room2.ID).Return(room2, nil).Once()
 
 	repo.On("GetAllPastReservationsByGuest", guestID, before).
 		Return(reservations, nil)
