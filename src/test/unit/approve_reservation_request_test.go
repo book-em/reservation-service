@@ -12,14 +12,18 @@ import (
 )
 
 func Test_ApproveReservationRequest_Success(t *testing.T) {
-	svc, repo, _, roomClient, notifClient := CreateTestRoomService()
+	svc, repo, userClient, roomClient, notifClient := CreateTestRoomService()
 
 	req := &internal.ReservationRequest{ID: 1, RoomID: 1, GuestID: 1, GuestCount: 2}
 	room := *DefaultRoom
 	room.HostID = 2
+	guestVal := *DefaultUser_Guest
+	guest := &guestVal
+	guest.Deleted = false
 
 	repo.On("FindRequestByID", uint(1)).Return(req, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(&room, nil)
+	userClient.On("FindById", context.Background(), req.GuestID).Return(guest, nil)
 	roomClient.On("FindCurrentAvailabilityListOfRoom", context.Background(), uint(1)).Return(DefaultAvailabilityList, nil)
 	roomClient.On("FindCurrentPricelistOfRoom", context.Background(), uint(1)).Return(DefaultPriceList, nil)
 	roomClient.On("QueryForReservation", mock.Anything, mock.Anything, mock.Anything).Return(DefaultReservationQueryResponse, nil)
@@ -64,15 +68,60 @@ func Test_ApproveReservationRequest_UnauthorizedHost(t *testing.T) {
 	assert.ErrorIs(t, err, internal.ErrUnauthorized)
 }
 
+func Test_ApproveReservationRequest_GuestNotFound(t *testing.T) {
+	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
+
+	req := &internal.ReservationRequest{ID: 1, RoomID: 1}
+	req.GuestID = 11
+	roomVal := *DefaultRoom
+	room := &roomVal
+	room.HostID = 99
+	guestVal := *DefaultUser_Guest
+	guest := &guestVal
+	guest.Id = 11
+	guest.Deleted = true
+
+	repo.On("FindRequestByID", req.ID).Return(req, nil)
+	roomClient.On("FindById", context.Background(), req.RoomID).Return(room, nil)
+	userClient.On("FindById", context.Background(), req.GuestID).Return(guest, nil)
+
+	err := svc.ApproveReservationRequest(context.Background(), room.HostID, 1, "Token")
+
+	assert.Error(t, err)
+}
+
+func Test_ApproveReservationRequest_GuestDbErr(t *testing.T) {
+	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
+
+	req := &internal.ReservationRequest{ID: 1, RoomID: 1}
+	req.GuestID = 11
+	roomVal := *DefaultRoom
+	room := &roomVal
+	room.HostID = 99
+
+	repo.On("FindRequestByID", req.ID).Return(req, nil)
+	roomClient.On("FindById", context.Background(), req.RoomID).Return(room, nil)
+	userClient.On("FindById", context.Background(), req.GuestID).Return(nil, errors.New("db create failed"))
+
+	err := svc.ApproveReservationRequest(context.Background(), room.HostID, 1, "Token")
+
+	assert.Error(t, err)
+}
+
 func Test_ApproveReservationRequest_CreateReservationFails(t *testing.T) {
-	svc, repo, _, roomClient, _ := CreateTestRoomService()
+	svc, repo, userClient, roomClient, _ := CreateTestRoomService()
 
 	req := &internal.ReservationRequest{ID: 1, RoomID: 1, GuestID: 1, GuestCount: 2}
 	room := *DefaultRoom
 	room.HostID = 2
+	guestVal := *DefaultUser_Guest
+	guest := &guestVal
+	guest.Id = 1
+	guest.Deleted = false
 
 	repo.On("FindRequestByID", uint(1)).Return(req, nil)
 	roomClient.On("FindById", context.Background(), uint(1)).Return(&room, nil)
+	userClient.On("FindById", context.Background(), req.GuestID).Return(guest, nil)
 	roomClient.On("FindCurrentAvailabilityListOfRoom", context.Background(), uint(1)).Return(DefaultAvailabilityList, nil)
 	roomClient.On("FindCurrentPricelistOfRoom", context.Background(), uint(1)).Return(DefaultPriceList, nil)
 
