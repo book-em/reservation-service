@@ -762,6 +762,17 @@ func (s *service) GetPastReservationsByGuest(ctx context.Context, guestID uint, 
 		return nil, err
 	}
 
+	util.TEL.Push(ctx, "filter out reservations from deleted rooms")
+	var validReservations []Reservation
+	for _, reservation := range items {
+		util.TEL.Debug("find room", "id", reservation.RoomID)
+		room, err := s.roomClient.FindById(util.TEL.Ctx(), reservation.RoomID)
+		if err == nil && room.Deleted == false {
+			validReservations = append(validReservations, reservation)
+		}
+	}
+	items = validReservations
+
 	util.TEL.Debug("found past reservations", "count", len(items), "guest_id", guestID)
 
 	out := make([]ReservationDTO, 0, len(items))
