@@ -546,6 +546,17 @@ func (s *service) RejectReservationRequest(ctx context.Context, hostID, requestI
 		return ErrUnauthorized
 	}
 
+	user, err := s.userClient.FindById(util.TEL.Ctx(), req.GuestID)
+	if err != nil {
+		util.TEL.Error("user of reservation request does not exist", err, "id", req.GuestID)
+		return ErrNotFound("user", req.GuestID)
+	}
+
+	if user.Deleted {
+		util.TEL.Error("user of reservation request deleted account", err, "id", req.GuestID)
+		return ErrNotFound("user", req.GuestID)
+	}
+
 	if err := s.repo.SetRequestStatus(requestID, Rejected); err != nil {
 		util.TEL.Error("could not change status to rejected", err, "request_id", requestID)
 		return err
@@ -590,6 +601,17 @@ func (s *service) ApproveReservationRequest(ctx context.Context, hostID, request
 	if room.HostID != hostID {
 		util.TEL.Error("bad host for room", nil, "host_id", room.HostID, "room_id", room.ID)
 		return ErrUnauthorized
+	}
+
+	user, err := s.userClient.FindById(util.TEL.Ctx(), req.GuestID)
+	if err != nil {
+		util.TEL.Error("user of reservation request does not exist", err, "id", req.GuestID)
+		return ErrNotFound("user", req.GuestID)
+	}
+
+	if user.Deleted {
+		util.TEL.Error("user of reservation request deleted account", err, "id", req.GuestID)
+		return ErrNotFound("user", req.GuestID)
 	}
 
 	if err := s.acceptReservationRequest(util.TEL.Ctx(), req, room, jwt); err != nil {
