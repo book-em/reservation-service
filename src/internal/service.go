@@ -66,6 +66,8 @@ type Service interface {
 
 	CanUserRateHost(ctx context.Context, guestID, hostID uint) (bool, error)
 	CanUserRateRoom(ctx context.Context, guestID, roomID uint) (bool, error)
+
+	GetPastReservationsByGuest(ctx context.Context, guestID uint, before time.Time) ([]ReservationDTO, error)
 }
 
 type service struct {
@@ -748,3 +750,34 @@ func (s *service) CanUserRateRoom(ctx context.Context, guestID, roomID uint) (bo
 	return ok, nil
 }
 
+func (s *service) GetPastReservationsByGuest(ctx context.Context, guestID uint, before time.Time) ([]ReservationDTO, error) {
+	util.TEL.Push(ctx, "get-past-reservations-by-guest")
+	defer util.TEL.Pop()
+
+	util.TEL.Info("fetching past reservations for guest", "guest_id", guestID, "before", before)
+
+	items, err := s.repo.GetAllPastReservationsByGuest(guestID, before)
+	if err != nil {
+		util.TEL.Error("failed to fetch past reservations for guest", err, "guest_id", guestID)
+		return nil, err
+	}
+
+	util.TEL.Debug("found past reservations", "count", len(items), "guest_id", guestID)
+
+	out := make([]ReservationDTO, 0, len(items))
+	for _, it := range items {
+		out = append(out, ReservationDTO{
+			ID:         it.ID,
+			RoomID:     it.RoomID,
+			DateFrom:   it.DateFrom,
+			DateTo:     it.DateTo,
+			GuestCount: it.GuestCount,
+			GuestID:    it.GuestID,
+			Cancelled:  it.Cancelled,
+			Cost:       it.Cost,
+		})
+	}
+
+	util.TEL.Info("successfully fetched past reservations", "guest_id", guestID, "count", len(out))
+	return out, nil
+}
