@@ -30,6 +30,9 @@ func (r *Route) Route(rg *gin.RouterGroup) {
 
 	rg.GET("/reservations/guest-stayed-with-host", r.handler.canUserRateHost)
 	rg.GET("/reservations/guest-stayed-in-room", r.handler.canUserRateRoom)
+
+	rg.GET("/reservations/history", r.handler.GetPastReservationsByGuest) 
+
 }
 
 type Handler struct{ service Service }
@@ -458,4 +461,35 @@ func (h *Handler) canUserRateRoom(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, EligibilityDTO{Eligible: ok})
+}
+
+func (h *Handler) GetPastReservationsByGuest(ctx *gin.Context) {
+	util.TEL.Push(ctx.Request.Context(), "get-past-reservations-api")
+	defer util.TEL.Pop()
+
+	jwt, err := util.GetJwt(ctx)
+	if err != nil {
+		util.TEL.Error("could not get JWT", err)
+		AbortError(ctx, ErrUnauthenticated)
+		return
+	}
+
+	if jwt.Role != util.Guest {
+		util.TEL.Error("user is not guest", nil, "role", jwt.Role)
+		AbortError(ctx, ErrUnauthorized)
+		return
+	}
+
+	before := time.Now().UTC()
+	util.TEL.Info("fetching past reservations for guest", "guest_id", jwt.ID, "before", before)
+
+	reservations, err := h.service.GetPastReservationsByGuest(util.TEL.Ctx(), uint(jwt.ID), before)
+	if err != nil {
+		util.TEL.Error("failed to get past reservations", err, "guest_id", jwt.ID)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch past reservations"})
+		return
+	}
+
+	util.TEL.Debug("returning past reservations to client", "count", len(reservations))
+	ctx.JSON(http.StatusOK, reservations)
 }

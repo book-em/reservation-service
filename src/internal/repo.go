@@ -27,7 +27,7 @@ type Repository interface {
 	FindReservationsByRoomID(roomID uint) ([]Reservation, error)
 	FindReservationById(id uint) (*Reservation, error)
 	HasGuestPastReservationInRooms(guestID uint, roomIDs []uint, now time.Time) (bool, error)
-}
+	 GetAllPastReservationsByGuest(guestID uint, before time.Time) ([]Reservation, error)}
 
 type repository struct {
 	db *gorm.DB
@@ -140,3 +140,10 @@ func (r *repository) HasGuestPastReservationInRooms(guestID uint, roomIDs []uint
 	return count > 0, err
 }
 
+func (r *repository) GetAllPastReservationsByGuest(guestID uint, before time.Time) ([]Reservation, error) {
+	var reservations []Reservation
+	err := r.db.Where("guest_id = ? AND cancelled = false AND date_to <= ?", guestID, before).
+        Order("date_to DESC").
+        Find(&reservations).Error
+	return reservations, err
+}
