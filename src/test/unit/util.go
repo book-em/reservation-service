@@ -116,6 +116,11 @@ func (r *MockReservationRepo) HasGuestPastReservationInRooms(guestID uint, roomI
     return args.Bool(0), args.Error(1)
 }
 
+func (r *MockReservationRepo) GetAllPastReservationsByGuest(guestID uint, before time.Time) ([]internal.Reservation, error) {
+	args := r.Called(guestID, before)
+	return args.Get(0).([]internal.Reservation), args.Error(1)
+}
+
 
 // ----------------------------------------------- Mock user client
 
